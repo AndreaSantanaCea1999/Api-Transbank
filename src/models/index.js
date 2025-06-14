@@ -1,3 +1,6 @@
+const { sequelize } = require('../config/database');
+
+// Importa modelos (ya usan sequelize internamente)
 const TransbankComercios = require('./TransbankComercios');
 const TransbankEstadosTransaccion = require('./TransbankEstadosTransaccion');
 const TransbankTransacciones = require('./TransbankTransacciones');
@@ -6,7 +9,7 @@ const TransbankCuotas = require('./TransbankCuotas');
 const TransbankDevoluciones = require('./TransbankDevoluciones');
 const TransbankLogs = require('./TransbankLogs');
 
-// Definir relaciones entre modelos
+// Definir relaciones
 const definirRelaciones = () => {
   // Comercios - Transacciones
   TransbankComercios.hasMany(TransbankTransacciones, {
@@ -69,7 +72,7 @@ const definirRelaciones = () => {
   });
 };
 
-// Ejecutar definición de relaciones
+// Ejecuta las relaciones al cargar el módulo
 definirRelaciones();
 
 // Exportar todos los modelos y sequelize
@@ -81,5 +84,5 @@ module.exports = {
   TransbankDetalleTransacciones,
   TransbankCuotas,
   TransbankDevoluciones,
-  TransbankLogs
+  TransbankLogs,
 };
