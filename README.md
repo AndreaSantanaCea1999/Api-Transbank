@@ -1,420 +1,637 @@
-# Api-Transbank
-# 🏪 API Transbank FERREMAS
+# 🏦 API Transbank FERREMAS
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Node.js-18.x-green?style=for-the-badge&logo=node.js" alt="Node.js">
-  <img src="https://img.shields.io/badge/Express-4.x-blue?style=for-the-badge&logo=express" alt="Express">
-  <img src="https://img.shields.io/badge/MySQL-8.x-orange?style=for-the-badge&logo=mysql" alt="MySQL">
-  <img src="https://img.shields.io/badge/WebPay-Transbank-red?style=for-the-badge" alt="WebPay">
-</p>
+[![Node.js Version](https://img.shields.io/badge/Node.js-18.x-green.svg)](https://nodejs.org/)
+[![Express.js](https://img.shields.io/badge/Express.js-4.x-blue.svg)](https://expressjs.com/)
+[![MySQL](https://img.shields.io/badge/MySQL-8.x-orange.svg)](https://mysql.com/)
+[![Transbank WebPay](https://img.shields.io/badge/Transbank-WebPay-red.svg)](https://transbank.cl/)
 
-API completa de integración con **Transbank WebPay** para el sistema FERREMAS. Esta API maneja el procesamiento de pagos mediante WebPay, se integra con las APIs de Inventario y Banco, y proporciona un sistema completo de gestión de transacciones.
+**API especializada para la integración con WebPay de Transbank** - Tercera API del ecosistema FERREMAS que maneja todos los pagos electrónicos y transacciones de comercio electrónico.
 
-## 📋 Tabla de Contenidos
+## ✨ Características Principales
 
-- [🏪 API Transbank FERREMAS](#-api-transbank-ferremas)
-  - [📋 Tabla de Contenidos](#-tabla-de-contenidos)
-  - [🚀 Características Principales](#-características-principales)
-  - [🏗️ Arquitectura del Sistema](#️-arquitectura-del-sistema)
-  - [📊 Base de Datos](#-base-de-datos)
-  - [⚙️ Instalación](#️-instalación)
-    - [📋 Prerrequisitos](#-prerrequisitos)
-    - [🔧 Configuración Paso a Paso](#-configuración-paso-a-paso)
-  - [🌐 Endpoints Principales](#-endpoints-principales)
-  - [💡 Ejemplos de Uso](#-ejemplos-de-uso)
-    - [1. Flujo Completo de Pago](#1-flujo-completo-de-pago)
-    - [2. Gestión de Comercios](#2-gestión-de-comercios)
-  - [🔗 Integración con Otras APIs](#-integración-con-otras-apis)
-    - [API de Inventario](#api-de-inventario)
-    - [API de Banco](#api-de-banco)
-  - [📝 Logging y Monitoreo](#-logging-y-monitoreo)
-  - [🧪 Testing](#-testing)
-  - [🐳 Docker](#-docker)
-  - [📚 Documentación Adicional](#-documentación-adicional)
-  - [🛡️ Seguridad](#️-seguridad)
-  - [🤝 Contribuir](#-contribuir)
-  - [📄 Licencia](#-licencia)
-
-## 🚀 Características Principales
-
-- ✅ **Integración completa con WebPay**: Soporte para transacciones de débito y crédito
-- ✅ **Gestión de comercios**: Múltiples comercios con configuraciones independientes
-- ✅ **Logs detallados**: Sistema completo de auditoría y trazabilidad
-- ✅ **Estados de transacción**: Seguimiento completo del ciclo de vida
-- ✅ **Configuraciones dinámicas**: Sistema flexible de configuración
-- ✅ **Health checks**: Monitoreo del estado de la API y sus dependencias
-- ✅ **Rate limiting**: Protección contra abuso y spam
-- ✅ **Validaciones robustas**: Validación completa de datos de entrada
-- ✅ **Integración con inventario**: Verificación de stock en tiempo real
-- ✅ **Integración bancaria**: Registro automático de pagos
+- 🔐 **Integración Segura con WebPay**: Implementación completa del protocolo WebPay Plus
+- 💳 **Gestión de Transacciones**: Ciclo completo desde inicio hasta confirmación
+- 🔄 **Sincronización Multi-API**: Integración con APIs de Inventario y Banco
+- 📊 **Auditoría Completa**: Logs detallados de todas las operaciones
+- 🛡️ **Seguridad Avanzada**: Rate limiting, validaciones y encriptación
+- 🌐 **Modo Dual**: Integración (pruebas) y Producción
+- 📈 **Monitoreo en Tiempo Real**: Estadísticas y dashboards
+- 🔁 **Gestión de Devoluciones**: Sistema completo de reembolsos
 
 ## 🏗️ Arquitectura del Sistema
 
-```mermaid
-graph TB
-    A[Cliente Web/Mobile] --> B[API Transbank FERREMAS]
-    B --> C[Base de Datos MySQL]
-    B --> D[WebPay Transbank]
-    B --> E[API Inventario]
-    B --> F[API Banco]
-    
-    subgraph "API Transbank"
-        G[Controladores]
-        H[Servicios]
-        I[Middlewares]
-        J[Modelos]
-    end
-    
-    B --> G
-    G --> H
-    H --> I
-    I --> J
-    J --> C
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   FRONTEND      │    │  API TRANSBANK  │    │   TRANSBANK     │
+│   (Angular)     │◄──►│   (Puerto 3002) │◄──►│   WEBPAY        │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                │
+                    ┌───────────┼───────────┐
+                    ▼           ▼           ▼
+            ┌──────────────┐ ┌─────────┐ ┌──────────────┐
+            │API INVENTARIO│ │  MySQL  │ │  API BANCO   │
+            │(Puerto 3000) │ │   DB    │ │(Puerto 3001) │
+            └──────────────┘ └─────────┘ └──────────────┘
 ```
 
-## 📊 Base de Datos
+## 📋 Tabla de Contenidos
 
-La API utiliza **6 tablas principales** para gestionar todas las operaciones:
+1. [🚀 Instalación Rápida](#-instalación-rápida)
+2. [⚙️ Configuración](#️-configuración)
+3. [📚 Documentación de API](#-documentación-de-api)
+4. [🔗 Integración con Otras APIs](#-integración-con-otras-apis)
+5. [💡 Ejemplos de Uso](#-ejemplos-de-uso)
+6. [🧪 Pruebas](#-pruebas)
+7. [🚀 Despliegue](#-despliegue)
+8. [🛠️ Desarrollo](#️-desarrollo)
 
-| Tabla | Descripción | Relaciones |
-|-------|-------------|------------|
-| `transbank_comercios` | Información de comercios registrados | 1:N con transacciones |
-| `transbank_transacciones` | Registro de todas las transacciones | N:1 con comercios |
-| `transbank_detalles_transaccion` | Detalles específicos de WebPay | 1:1 con transacciones |
-| `transbank_estados_transaccion` | Historial de cambios de estado | N:1 con transacciones |
-| `transbank_configuraciones` | Configuraciones del sistema | - |
-| `transbank_logs` | Logs detallados del sistema | N:1 con transacciones |
+## 🚀 Instalación Rápida
 
-## ⚙️ Instalación
+### Prerrequisitos
 
-### 📋 Prerrequisitos
+- ✅ Node.js 18.x o superior
+- ✅ MySQL 8.x
+- ✅ APIs de Inventario y Banco funcionando
+- ✅ Credenciales de Transbank (integración o producción)
 
-- **Node.js** v18.x o superior
-- **MySQL** v8.x o superior
-- **NPM** v8.x o superior
-- **APIs FERREMAS** (Inventario y Banco) corriendo
+### Instalación
 
-### 🔧 Configuración Paso a Paso
-
-1. **Clonar el repositorio**
-   ```bash
-   git clone https://github.com/AndreaSantanaCea1999/api-transbank-ferremas.git
-   cd api-transbank-ferremas
-   ```
-
-2. **Instalar dependencias**
-   ```bash
-   npm install
-   ```
-
-3. **Configurar variables de entorno**
-   ```bash
-   cp .env.example .env
-   # Editar .env con tus configuraciones
-   ```
-
-4. **Configurar base de datos**
-   ```bash
-   # Crear base de datos
-   mysql -u root -p -e "CREATE DATABASE ferremas_complete;"
-   
-   # Ejecutar script de creación de tablas
-   mysql -u administrador -p ferremas_complete < database/create_transbank_tables.sql
-   ```
-
-5. **Verificar instalación**
-   ```bash
-   npm run verify-db
-   ```
-
-6. **Inicializar datos**
-   ```bash
-   node src/utils/init-transbank.js
-   ```
-
-7. **Iniciar la API**
-   ```bash
-   # Desarrollo
-   npm run dev
-   
-   # Producción
-   npm start
-   ```
-
-8. **Verificar funcionamiento**
-   ```bash
-   curl http://localhost:3002/api/health
-   ```
-
-## 🌐 Endpoints Principales
-
-### 💳 Transbank - Operaciones Principales
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| `POST` | `/api/transbank/iniciar` | Iniciar nueva transacción |
-| `POST` | `/api/transbank/confirmar` | Confirmar transacción |
-| `GET` | `/api/transbank/estado/:token` | Consultar estado |
-| `POST` | `/api/transbank/anular/:token` | Anular transacción |
-| `POST` | `/api/transbank/webhook` | Webhook notificaciones |
-
-### 🏪 Gestión de Comercios
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| `GET` | `/api/comercios` | Listar comercios |
-| `POST` | `/api/comercios` | Crear comercio |
-| `GET` | `/api/comercios/:id` | Obtener comercio |
-| `PUT` | `/api/comercios/:id` | Actualizar comercio |
-| `PATCH` | `/api/comercios/:id/estado` | Cambiar estado |
-
-### 📊 Consultas y Reportes
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| `GET` | `/api/transacciones` | Listar transacciones |
-| `GET` | `/api/transacciones/:id` | Obtener transacción |
-| `GET` | `/api/transacciones/estado/:estado` | Por estado |
-| `GET` | `/api/transacciones/reportes/resumen` | Resumen |
-
-### 🔍 Health & Monitoring
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| `GET` | `/api/health` | Estado general |
-| `GET` | `/api/health/database` | Estado BD |
-| `GET` | `/api/health/integrations` | Estado APIs |
-| `GET` | `/api/logs` | Logs del sistema |
-
-## 💡 Ejemplos de Uso
-
-### 1. Flujo Completo de Pago
-
-```javascript
-// 1. Iniciar transacción
-const transaccion = await fetch('http://localhost:3002/api/transbank/iniciar', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    idPedido: 12345,
-    idCliente: 1,
-    monto: 50000,
-    codigoComercio: "597055555532",
-    descripcion: "Compra herramientas",
-    items: [
-      { idProducto: 101, cantidad: 2, idSucursal: 1 }
-    ]
-  })
-});
-
-const { data } = await transaccion.json();
-console.log('Token:', data.token);
-console.log('URL WebPay:', data.url);
-
-// 2. Redirigir usuario a WebPay
-window.location.href = data.url;
-
-// 3. Después del pago, confirmar transacción
-const confirmacion = await fetch('http://localhost:3002/api/transbank/confirmar', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    token_ws: data.token
-  })
-});
-
-const resultado = await confirmacion.json();
-console.log('Estado:', resultado.data.estado);
-console.log('Código autorización:', resultado.data.codigoAutorizacion);
-```
-
-### 2. Gestión de Comercios
-
-```javascript
-// Crear nuevo comercio
-const comercio = await fetch('http://localhost:3002/api/comercios', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    Codigo_Comercio: "597055555533",
-    Nombre_Comercio: "FERREMAS SUCURSAL NORTE",
-    Rut_Comercio: "98765432-1",
-    API_Key: "597055555533",
-    API_Secret: "mi_secret_seguro",
-    Ambiente: "INTEGRACION"
-  })
-});
-
-// Listar transacciones de un comercio
-const transacciones = await fetch(
-  'http://localhost:3002/api/comercios/1/transacciones?estado=APROBADA'
-);
-```
-
-## 🔗 Integración con Otras APIs
-
-### API de Inventario
 ```bash
-# Variable de entorno
-API_INVENTARIO_URL=http://localhost:3000/api
+# 1. Clonar el repositorio
+git clone https://github.com/AndreaSantanaCea1999/api-transbank-ferremas.git
+cd api-transbank-ferremas
 
-# Endpoints utilizados:
-# GET /inventario/producto/{id}/sucursal/{sucursal}
-# PATCH /pedidos/{id}/estado
+# 2. Instalar dependencias
+npm install
+
+# 3. Configurar variables de entorno
+cp .env.example .env
+nano .env  # Editar con tus credenciales
+
+# 4. Crear tablas en la base de datos
+mysql -u root -p ferremas_complete < database/transbank-schema.sql
+
+# 5. Verificar configuración
+npm run verify
+
+# 6. Insertar datos de prueba (opcional)
+npm run seed
+
+# 7. Iniciar en modo desarrollo
+npm run dev
 ```
 
-### API de Banco
+### Verificación de Instalación
+
 ```bash
-# Variable de entorno  
-API_BANCO_URL=http://localhost:3001/api
+# Verificar que la API está funcionando
+curl http://localhost:3002/api/health
 
-# Endpoints utilizados:
-# POST /pagos
-# POST /webpay
-# GET /clientes/{id}
-```
-
-## 📝 Logging y Monitoreo
-
-La API incluye un sistema completo de logging:
-
-```javascript
-// Logs automáticos en base de datos
-GET /api/logs?nivel=ERROR&page=1&limit=50
-
-// Logs por transacción específica
-GET /api/logs/transaccion/123
-
-// Limpiar logs antiguos
-POST /api/logs/limpiar
+# Respuesta esperada:
 {
-  "diasAntiguedad": 30
+  "status": "OK",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "uptime": 125.432,
+  "environment": "development",
+  "version": "1.0.0"
 }
 ```
 
-**Niveles de log disponibles:**
-- `DEBUG`: Información detallada para desarrollo
-- `INFO`: Información general del sistema
-- `WARN`: Advertencias que no detienen el flujo
-- `ERROR`: Errores que requieren atención
-- `FATAL`: Errores críticos del sistema
+## ⚙️ Configuración
 
-## 🧪 Testing
+### Variables de Entorno Principales
 
 ```bash
-# Ejecutar todos los tests
+# Servidor
+NODE_ENV=development
+PORT=3002
+
+# Base de Datos
+DB_HOST=localhost
+DB_USER=administrador
+DB_PASSWORD=yR!9uL2@pX
+DB_NAME=ferremas_complete
+
+# Transbank
+TRANSBANK_ENVIRONMENT=integration
+TRANSBANK_COMMERCE_CODE=597055555532
+TRANSBANK_API_KEY=579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C
+
+# Integración APIs
+API_INVENTARIO_URL=http://localhost:3000/api
+API_BANCO_URL=http://localhost:3001/api
+
+# URLs Frontend
+FRONTEND_BASE_URL=http://localhost:4200
+WEBPAY_RETURN_URL=http://localhost:4200/payment/return
+WEBPAY_FINAL_URL=http://localhost:4200/payment/final
+```
+
+### Configuración de Transbank
+
+#### Modo Integración (Pruebas)
+```bash
+TRANSBANK_ENVIRONMENT=integration
+TRANSBANK_COMMERCE_CODE=597055555532
+TRANSBANK_API_KEY=579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C
+```
+
+#### Modo Producción
+```bash
+TRANSBANK_ENVIRONMENT=production
+TRANSBANK_COMMERCE_CODE=tu_codigo_comercio_real
+TRANSBANK_API_KEY=tu_api_key_produccion
+```
+
+## 📚 Documentación de API
+
+### Endpoints Principales
+
+#### 🚀 Iniciar Transacción
+```http
+POST /api/transbank/init
+Content-Type: application/json
+
+{
+  "monto": 75000,
+  "productos": [
+    {
+      "idProducto": 1,
+      "cantidad": 2,
+      "precioUnitario": 15000,
+      "descripcion": "Martillo Bosch"
+    },
+    {
+      "idProducto": 2,
+      "cantidad": 1,
+      "precioUnitario": 45000,
+      "descripcion": "Taladro Stanley"
+    }
+  ],
+  "returnUrl": "http://localhost:4200/payment/return",
+  "finalUrl": "http://localhost:4200/payment/final",
+  "sessionId": "USER-SESSION-123"
+}
+```
+
+**Respuesta:**
+```json
+{
+  "success": true,
+  "message": "Transacción iniciada exitosamente",
+  "data": {
+    "token": "SIMU_1704447600000_ABC123",
+    "url": "https://webpay3gint.transbank.cl/webpayserver/initTransaction?token_ws=SIMU_1704447600000_ABC123",
+    "transaccionId": 15,
+    "ordenCompra": "ORD-1704447600000-ABC123",
+    "monto": 75000,
+    "fechaVencimiento": "2024-01-15T11:00:00.000Z"
+  }
+}
+```
+
+#### ✅ Confirmar Transacción
+```http
+POST /api/transbank/commit
+Content-Type: application/json
+
+{
+  "token_ws": "SIMU_1704447600000_ABC123"
+}
+```
+
+**Respuesta Exitosa:**
+```json
+{
+  "success": true,
+  "message": "Transacción confirmada exitosamente",
+  "data": {
+    "transaccionId": 15,
+    "codigoRespuesta": 0,
+    "codigoAutorizacion": "AUTH123456",
+    "estado": "AUTH",
+    "tipoTarjeta": "Visa",
+    "ultimosDigitos": "1234",
+    "monto": 75000
+  }
+}
+```
+
+#### 📊 Consultar Estado
+```http
+GET /api/transbank/status/{token}
+```
+
+#### 📋 Listar Transacciones
+```http
+GET /api/transbank/transactions?page=1&limit=10&estado=AUTH
+```
+
+### Códigos de Respuesta
+
+| Código | Descripción |
+|--------|-------------|
+| `200` | Operación exitosa |
+| `201` | Transacción creada |
+| `400` | Datos inválidos |
+| `404` | Transacción no encontrada |
+| `429` | Rate limit excedido |
+| `500` | Error interno |
+
+## 🔗 Integración con Otras APIs
+
+### Flujo Completo de Compra
+
+```mermaid
+sequenceDiagram
+    participant C as Cliente
+    participant F as Frontend
+    participant T as API Transbank
+    participant I as API Inventario
+    participant B as API Banco
+    participant W as WebPay
+
+    C->>F: Seleccionar productos
+    F->>T: POST /transbank/init
+    T->>I: Verificar stock
+    I-->>T: Stock disponible
+    T->>W: Crear transacción
+    W-->>T: Token y URL
+    T-->>F: Token y URL
+    F->>C: Redirigir a WebPay
+    C->>W: Pagar con tarjeta
+    W->>F: Retorno (success/failure)
+    F->>T: POST /transbank/commit
+    T->>W: Confirmar transacción
+    W-->>T: Resultado
+    T->>I: Descontar stock
+    T->>B: Registrar pago
+    T-->>F: Confirmación final
+```
+
+### Integración con API de Inventario
+
+```javascript
+// Verificar stock antes de crear transacción
+const stockDisponible = await inventarioService.verificarStock(
+  idProducto, 
+  cantidad, 
+  idSucursal
+);
+
+// Descontar stock después de pago exitoso
+await inventarioService.descontarStock(
+  idProducto, 
+  cantidad, 
+  idSucursal
+);
+```
+
+### Integración con API de Banco
+
+```javascript
+// Registrar pago después de confirmación
+await bancoService.registrarPago({
+  idPedido: transaccion.ID_Pedido,
+  monto: transaccion.Monto,
+  metodoPago: 'Crédito',
+  procesadorPago: 'Transbank WebPay',
+  numeroTransaccion: transaccion.Token_Transbank,
+  codigoAutorizacion: resultado.authorization_code
+});
+```
+
+## 💡 Ejemplos de Uso
+
+### 🛒 Caso de Uso: Carrito de Compras
+
+#### 1. Frontend: Preparar Carrito
+```javascript
+// Ejemplo Angular/React
+const carrito = {
+  productos: [
+    { id: 1, nombre: 'Martillo Bosch', precio: 15000, cantidad: 2 },
+    { id: 2, nombre: 'Taladro Stanley', precio: 45000, cantidad: 1 }
+  ],
+  total: 75000
+};
+
+// Iniciar proceso de pago
+const iniciarPago = async () => {
+  const response = await fetch('/api/transbank/init', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      monto: carrito.total,
+      productos: carrito.productos.map(p => ({
+        idProducto: p.id,
+        cantidad: p.cantidad,
+        precioUnitario: p.precio,
+        descripcion: p.nombre
+      })),
+      returnUrl: `${window.location.origin}/payment/return`,
+      finalUrl: `${window.location.origin}/payment/final`,
+      sessionId: 'USER-' + Date.now()
+    })
+  });
+
+  const data = await response.json();
+  
+  if (data.success) {
+    // Redirigir a WebPay
+    window.location.href = data.data.url;
+  }
+};
+```
+
+#### 2. Manejo de Retorno de WebPay
+```javascript
+// En el componente de retorno de pago
+const confirmarPago = async (token) => {
+  const response = await fetch('/api/transbank/commit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token_ws: token })
+  });
+
+  const resultado = await response.json();
+  
+  if (resultado.success && resultado.data.codigoRespuesta === 0) {
+    // Pago exitoso
+    showSuccess('¡Pago realizado exitosamente!');
+    redirectTo('/order-confirmation');
+  } else {
+    // Pago fallido
+    showError('El pago no pudo ser procesado');
+    redirectTo('/cart');
+  }
+};
+```
+
+### 👨‍💼 Panel de Administrador
+
+```javascript
+// Consultar transacciones del día
+const obtenerTransaccionesHoy = async () => {
+  const hoy = new Date().toISOString().split('T')[0];
+  const response = await fetch(
+    `/api/transbank/transactions?fechaDesde=${hoy}&estado=AUTH`
+  );
+  
+  const data = await response.json();
+  return data.data.transacciones;
+};
+
+// Dashboard de ventas
+const generarReporte = async () => {
+  const stats = await fetch('/api/estadisticas/dashboard');
+  const estadisticas = await stats.json();
+  
+  return {
+    ventasHoy: estadisticas.data.resumenMes.total_transacciones,
+    montoTotal: estadisticas.data.resumenMes.monto_total,
+    promedioVenta: estadisticas.data.resumenMes.monto_promedio
+  };
+};
+```
+
+## 🧪 Pruebas
+
+### Ejecutar Pruebas Completas
+```bash
+# Verificar configuración
+npm run verify
+
+# Insertar datos de prueba
+npm run seed
+
+# Ejecutar pruebas de integración
+npm run test:integration
+
+# Limpiar datos de prueba
+npm run cleanup
+```
+
+### Prueba Manual con cURL
+```bash
+# 1. Iniciar transacción de prueba
+curl -X POST http://localhost:3002/api/transbank/init \
+  -H "Content-Type: application/json" \
+  -d '{
+    "monto": 50000,
+    "productos": [
+      {
+        "idProducto": 1,
+        "cantidad": 1,
+        "precioUnitario": 50000,
+        "descripcion": "Producto de Prueba"
+      }
+    ],
+    "returnUrl": "http://localhost:4200/return",
+    "sessionId": "TEST-123"
+  }'
+
+# 2. Confirmar transacción (usar token de respuesta anterior)
+curl -X POST http://localhost:3002/api/transbank/commit \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token_ws": "SIMU_1704447600000_ABC123"
+  }'
+```
+
+### Casos de Prueba Principales
+
+| Caso | Descripción | Resultado Esperado |
+|------|-------------|-------------------|
+| **Transacción Exitosa** | Compra normal con productos válidos | `response_code: 0` |
+| **Stock Insuficiente** | Producto sin stock disponible | Error `INSUFFICIENT_STOCK` |
+| **Monto Inválido** | Monto menor a $50 | Error `INVALID_AMOUNT` |
+| **Token Inválido** | Confirmar con token inexistente | Error `TRANSACTION_NOT_FOUND` |
+| **Rate Limiting** | Muchas transacciones seguidas | Error `RATE_LIMIT_EXCEEDED` |
+
+## 🚀 Despliegue
+
+### Producción
+
+```bash
+# 1. Configurar variables de producción
+export NODE_ENV=production
+export TRANSBANK_ENVIRONMENT=production
+export TRANSBANK_COMMERCE_CODE=tu_codigo_real
+export TRANSBANK_API_KEY=tu_key_real
+
+# 2. Instalar dependencias de producción
+npm ci --only=production
+
+# 3. Iniciar con PM2
+npm install -g pm2
+pm2 start ecosystem.config.js
+
+# 4. Configurar nginx (opcional)
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+### Docker
+
+```dockerfile
+FROM node:18-alpine
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY . .
+EXPOSE 3002
+
+CMD ["npm", "start"]
+```
+
+```bash
+# Construir y ejecutar
+docker build -t api-transbank-ferremas .
+docker run -p 3002:3002 --env-file .env api-transbank-ferremas
+```
+
+## 🛠️ Desarrollo
+
+### Estructura del Proyecto
+```
+api-transbank-ferremas/
+├── src/
+│   ├── config/          # Configuración DB y app
+│   ├── controllers/     # Lógica de controladores
+│   ├── middlewares/     # Middlewares personalizados
+│   ├── models/          # Modelos Sequelize
+│   ├── routes/          # Definición de rutas
+│   ├── services/        # Servicios de negocio
+│   └── utils/           # Utilidades y helpers
+├── scripts/             # Scripts de mantenimiento
+├── logs/               # Archivos de log (generados)
+├── database/           # Scripts SQL
+├── .env                # Variables de entorno
+└── package.json
+```
+
+### Comandos de Desarrollo
+
+```bash
+# Desarrollo con hot reload
+npm run dev
+
+# Verificar configuración
+npm run verify
+
+# Insertar datos de prueba
+npm run seed
+
+# Ejecutar pruebas
 npm test
 
-# Tests en modo watch  
-npm run test:watch
+# Limpiar datos de prueba
+npm run cleanup
 
-# Generar reporte de cobertura
-npm run test:coverage
-
-# Tests de integración
-npm run test:integration
+# Ver logs en tiempo real
+tail -f logs/transbank-api.log
 ```
 
-**Estructura de tests:**
-```
-tests/
-├── unit/           # Tests unitarios
-├── integration/    # Tests de integración
-└── e2e/           # Tests end-to-end
-```
+### Convenciones de Código
 
-## 🐳 Docker
+- ✅ **ES6+** con async/await
+- ✅ **Camel Case** para variables y funciones
+- ✅ **Pascal Case** para modelos y clases
+- ✅ **Comentarios JSDoc** para funciones públicas
+- ✅ **Error handling** consistente
+- ✅ **Logging** estructurado con Winston
 
+## 📊 Monitoreo y Logs
+
+### Logs Principales
 ```bash
-# Construir imagen
-docker build -t api-transbank-ferremas .
+# Ver logs en tiempo real
+npm run logs
 
-# Ejecutar con Docker Compose
-docker-compose up -d
+# Filtrar por nivel
+grep "ERROR" logs/transbank-api.log
 
-# Ver logs
-docker-compose logs -f api-transbank
+# Ver logs de transacciones
+grep "TRANSACTION" logs/transbank-api.log
 ```
 
-**docker-compose.yml incluye:**
-- API Transbank
-- Base de datos MySQL
-- Volúmenes persistentes
-- Red interna para las APIs
+### Métricas Importantes
+- 📈 **Transacciones por minuto**
+- 💰 **Monto total procesado**
+- ✅ **Tasa de éxito de pagos**
+- ⚡ **Tiempo de respuesta promedio**
+- 🚨 **Errores por tipo**
 
-## 📚 Documentación Adicional
+## 🆘 Solución de Problemas
 
-- **Postman Collection**: Importar `docs/postman/API_Transbank_FERREMAS.json`
-- **OpenAPI/Swagger**: Disponible en `/api-docs` cuando está ejecutándose
-- **Diagramas de arquitectura**: Carpeta `docs/diagrams/`
-- **Manual de integración**: `docs/integration-guide.md`
+### Problemas Comunes
 
-## 🛡️ Seguridad
+#### Error: "TRANSBANK_API_KEY no configurado"
+```bash
+# Verificar variables de entorno
+npm run verify
 
-### Medidas Implementadas:
-- ✅ **Rate Limiting**: Límites por IP y endpoint
-- ✅ **Validación de entrada**: Validación estricta con Joi
-- ✅ **Headers de seguridad**: Helmet.js configurado
-- ✅ **Logs de seguridad**: Auditoría completa
-- ✅ **Encriptación**: Datos sensibles encriptados
-- ✅ **CORS**: Configurado para dominios específicos
+# Configurar correctamente en .env
+TRANSBANK_API_KEY=tu_api_key_aqui
+```
 
-### Recomendaciones:
-- Usar HTTPS en producción
-- Configurar firewall para base de datos
-- Rotar claves API regularmente
-- Monitorear logs de seguridad
+#### Error: "Stock insuficiente"
+```bash
+# Verificar API de inventario
+curl http://localhost:3000/api/health
 
-## 🤝 Contribuir
+# Verificar stock del producto
+curl http://localhost:3000/api/inventario/producto/1/sucursal/1
+```
 
+#### Error: "Timeout con Transbank"
+- Verificar conectividad de red
+- Revisar URLs de Transbank en configuración
+- Incrementar timeout en variables de entorno
+
+### Logs de Debug
+```bash
+# Habilitar logs detallados
+export LOG_LEVEL=debug
+npm run dev
+```
+
+## 🤝 Contribución
+
+### Proceso de Desarrollo
 1. Fork del repositorio
-2. Crear rama para feature: `git checkout -b feature/nueva-funcionalidad`
-3. Commit cambios: `git commit -am 'Agregar nueva funcionalidad'`
-4. Push a la rama: `git push origin feature/nueva-funcionalidad`
+2. Crear rama feature: `git checkout -b feature/nueva-funcionalidad`
+3. Commit cambios: `git commit -m "feat: agregar nueva funcionalidad"`
+4. Push a rama: `git push origin feature/nueva-funcionalidad`
 5. Crear Pull Request
 
-### Estándares de código:
-- ESLint configurado
-- Prettier para formateo
-- Conventional Commits
-- Tests para nuevas funcionalidades
+### Guías de Contribución
+- Seguir convenciones de código existentes
+- Agregar pruebas para nueva funcionalidad
+- Actualizar documentación
+- Verificar que pasan todas las pruebas
+
+## 📞 Soporte
+
+- 📧 **Email**: soporte@ferremas.cl
+- 📱 **WhatsApp**: +56 9 XXXX XXXX
+- 🐛 **Issues**: [GitHub Issues](https://github.com/AndreaSantanaCea1999/api-transbank-ferremas/issues)
+- 📚 **Wiki**: [Documentación Completa](https://github.com/AndreaSantanaCea1999/api-transbank-ferremas/wiki)
 
 ## 📄 Licencia
 
-MIT License - ver archivo `LICENSE` para detalles.
+Este proyecto está licenciado bajo la **Licencia MIT** - ver archivo [LICENSE](LICENSE) para detalles.
 
 ---
 
-## 🚨 Solución de Problemas
+<div align="center">
 
-### Error: "Cannot connect to MySQL"
-```bash
-# Verificar que MySQL esté corriendo
-sudo systemctl status mysql
+**🔐 API Transbank FERREMAS v1.0.0**
 
-# Verificar credenciales en .env
-mysql -u administrador -p -e "SHOW DATABASES;"
-```
+*Desarrollado con ❤️ para el ecosistema FERREMAS*
 
-### Error: "API de inventario no responde"
-```bash
-# Verificar que la API de inventario esté corriendo
-curl http://localhost:3000/api/health
+[⬆️ Volver al inicio](#-api-transbank-ferremas)
 
-# Verificar URL en .env
-API_INVENTARIO_URL=http://localhost:3000/api
-```
-
-### Error: "Rate limit exceeded"
-```bash
-# Ajustar límites en .env
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX=100
-```
-
----
-
-<p align="center">
-  <strong>🏪 API Transbank FERREMAS - Sistema completo de pagos integrado</strong><br>
-  Desarrollado con ❤️ para FERREMAS
-</p>
+</div>
