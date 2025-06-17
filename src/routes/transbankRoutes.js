@@ -1,30 +1,26 @@
+// src/routes/transbankRoutes.js
 const express = require('express');
 const router = express.Router();
+
+// Importa tu controlador con todas las funciones
 const controller = require('../controllers/transbankController');
 
+// Iniciar una nueva transacción
 router.post('/iniciar', controller.iniciarTransaccion);
-router.post('/confirmar', controller.confirmarTransaccion);
+
+// Registrar detalle de la transacción
+router.post('/detalle', controller.detalle);
+
+// Confirmar la transacción (orquesta Banco + Inventario)
+router.post('/confirmar', controller.confirmar);
+
+// Obtener el estado de una transacción por ID
 router.get('/estado/:id', controller.obtenerEstado);
+
+// Listar todos los logs de transacciones
 router.get('/logs', controller.obtenerLogs);
 
+// Listar todas las transacciones con su estado
+router.get('/listar', controller.listarTransacciones);
+
 module.exports = router;
-
-// === src/app.js ===
-const express = require('express');
-const cors = require('cors');
-require('dotenv').config();
-const sequelize = require('./database');
-
-const app = express();
-const PORT = process.env.PORT || 4000;
-
-app.use(cors());
-app.use(express.json());
-
-const transbankRoutes = require('./routes/transbankRoutes');
-app.use('/api/transbank', transbankRoutes);
-
-sequelize.sync({ force: false }).then(() => {
-  console.log('Base de datos conectada');
-  app.listen(PORT, () => console.log(`Servidor en puerto ${PORT}`));
-});
