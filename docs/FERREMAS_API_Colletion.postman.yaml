@@ -1,0 +1,639 @@
+{
+  "info": {
+    "name": "API FERREMAS - Sistema Integrado",
+    "description": "Colección completa para probar las 3 APIs del sistema FERREMAS:\n\n- 📦 **API Inventario** (Puerto 3000): Gestión de productos y stock\n- 🏦 **API Banco** (Puerto 3001): Pagos y WebPay\n- 💳 **API Transbank** (Puerto 3003): Orquestador de transacciones\n\n## 🚀 Flujo de Prueba Recomendado\n\n1. Verificar salud de APIs\n2. Consultar productos disponibles\n3. Crear transacción\n4. Confirmar transacción\n5. Verificar estado final\n\n## 🔧 Configuración\n\nAsegúrate de que las 3 APIs estén corriendo:\n- Inventario: http://localhost:3000\n- Banco: http://localhost:3001  \n- Transbank: http://localhost:3003",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "inventario_url",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    },
+    {
+      "key": "banco_url", 
+      "value": "http://localhost:3001/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "transbank_url",
+      "value": "http://localhost:3003/api/transbank",
+      "type": "string"
+    },
+    {
+      "key": "transaction_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "test_client_id",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🏥 Health Checks",
+      "description": "Verificar que todas las APIs estén funcionando correctamente",
+      "item": [
+        {
+          "name": "Health Check - API Inventario",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{inventario_url}}/productos",
+              "host": ["{{inventario_url}}"],
+              "path": ["productos"]
+            },
+            "description": "Verifica que la API de Inventario esté respondiendo"
+          },
+          "response": []
+        },
+        {
+          "name": "Health Check - API Banco",
+          "request": {
+            "method": "GET", 
+            "header": [],
+            "url": {
+              "raw": "{{banco_url}}/",
+              "host": ["{{banco_url}}"],
+              "path": [""]
+            },
+            "description": "Verifica que la API de Banco esté respondiendo"
+          },
+          "response": []
+        },
+        {
+          "name": "Health Check - API Transbank",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{transbank_url}}/",
+              "host": ["{{transbank_url}}"], 
+              "path": [""]
+            },
+            "description": "Verifica que la API Transbank esté respondiendo"
+          },
+          "response": []
+        },
+        {
+          "name": "Health Check - Sistema Completo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{transbank_url}}/health",
+              "host": ["{{transbank_url}}"],
+              "path": ["health"]
+            },
+            "description": "Verifica la salud de todo el sistema integrado"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📦 API Inventario",
+      "description": "Endpoints para gestión de inventario y productos",
+      "item": [
+        {
+          "name": "Listar Productos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{inventario_url}}/productos",
+              "host": ["{{inventario_url}}"],
+              "path": ["productos"]
+            },
+            "description": "Obtiene lista de todos los productos disponibles"
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener Producto por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{inventario_url}}/productos/1",
+              "host": ["{{inventario_url}}"],
+              "path": ["productos", "1"]
+            },
+            "description": "Obtiene detalles de un producto específico"
+          },
+          "response": []
+        },
+        {
+          "name": "Verificar Stock por Producto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{inventario_url}}/inventario/producto/1",
+              "host": ["{{inventario_url}}"],
+              "path": ["inventario", "producto", "1"]
+            },
+            "description": "Verifica el stock disponible de un producto"
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Inventario Completo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{inventario_url}}/inventario",
+              "host": ["{{inventario_url}}"],
+              "path": ["inventario"]
+            },
+            "description": "Lista todo el inventario con stock"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🏦 API Banco",
+      "description": "Endpoints para gestión de pagos y WebPay",
+      "item": [
+        {
+          "name": "Info API Banco",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{banco_url}}/",
+              "host": ["{{banco_url}}"],
+              "path": [""]
+            },
+            "description": "Información general de la API de Banco"
+          },
+          "response": []
+        },
+        {
+          "name": "Listar Pagos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{banco_url}}/pagos",
+              "host": ["{{banco_url}}"],
+              "path": ["pagos"]
+            },
+            "description": "Lista todos los pagos registrados"
+          },
+          "response": []
+        },
+        {
+          "name": "Crear Pago Manual",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": {{test_client_id}},\n  \"ordenId\": \"TEST-{{$timestamp}}\",\n  \"monto\": 25000,\n  \"divisa\": \"CLP\",\n  \"metodo_pago\": \"TRANSFERENCIA\"\n}"
+            },
+            "url": {
+              "raw": "{{banco_url}}/pagos",
+              "host": ["{{banco_url}}"],
+              "path": ["pagos"]
+            },
+            "description": "Crea un pago manual para testing"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "💳 API Transbank - Flujo Completo",
+      "description": "Flujo completo de transacciones desde creación hasta confirmación",
+      "item": [
+        {
+          "name": "1. Crear Transacción",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Guardar ID de transacción para usar en siguientes requests",
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.success && response.transaccion) {",
+                  "        pm.collectionVariables.set('transaction_id', response.transaccion.id);",
+                  "        console.log('Transaction ID saved:', response.transaccion.id);",
+                  "    }",
+                  "}",
+                  "",
+                  "// Tests básicos",
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has success true', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Transaction ID is present', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.transaccion).to.have.property('id');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": {{test_client_id}},\n  \"ordenCompra\": \"ORD-{{$timestamp}}\",\n  \"monto\": 75000,\n  \"divisa\": \"CLP\",\n  \"detalles\": [\n    {\n      \"ID_Producto\": 1,\n      \"Cantidad\": 2,\n      \"Precio_Unitario\": 25000\n    },\n    {\n      \"ID_Producto\": 2,\n      \"Cantidad\": 1,\n      \"Precio_Unitario\": 25000\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{transbank_url}}/iniciar",
+              "host": ["{{transbank_url}}"],
+              "path": ["iniciar"]
+            },
+            "description": "Crea una nueva transacción verificando stock de productos"
+          },
+          "response": []
+        },
+        {
+          "name": "2. Registrar Detalles (Opcional)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_transaccion\": {{transaction_id}},\n  \"detalles\": [\n    {\n      \"ID_Producto\": 1,\n      \"Cantidad\": 2,\n      \"Precio_Unitario\": 25000\n    },\n    {\n      \"ID_Producto\": 2,\n      \"Cantidad\": 1,\n      \"Precio_Unitario\": 25000\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{transbank_url}}/detalle",
+              "host": ["{{transbank_url}}"],
+              "path": ["detalle"]
+            },
+            "description": "Registra o actualiza detalles de la transacción (opcional si ya se enviaron en crear)"
+          },
+          "response": []
+        },
+        {
+          "name": "3. Confirmar Transacción",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Transaction confirmed successfully', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Payment and order were processed', function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.data).to.have.property('pago_registrado');",
+                  "    pm.expect(response.data).to.have.property('pedido_creado');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_transaccion\": {{transaction_id}}\n}"
+            },
+            "url": {
+              "raw": "{{transbank_url}}/confirmar",
+              "host": ["{{transbank_url}}"],
+              "path": ["confirmar"]
+            },
+            "description": "Confirma la transacción ejecutando el flujo completo: pago + pedido + stock"
+          },
+          "response": []
+        },
+        {
+          "name": "4. Verificar Estado Final",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{transbank_url}}/estado/{{transaction_id}}",
+              "host": ["{{transbank_url}}"],
+              "path": ["estado", "{{transaction_id}}"]
+            },
+            "description": "Verifica el estado final de la transacción"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📋 Consultas y Reportes",
+      "description": "Endpoints para consultas, listados y reportes",
+      "item": [
+        {
+          "name": "Listar Todas las Transacciones",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{transbank_url}}/listar?limit=10",
+              "host": ["{{transbank_url}}"],
+              "path": ["listar"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Lista todas las transacciones con paginación"
+          },
+          "response": []
+        },
+        {
+          "name": "Filtrar Transacciones por Estado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{transbank_url}}/listar?estado=Aprobado&limit=5",
+              "host": ["{{transbank_url}}"],
+              "path": ["listar"],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "Aprobado"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Filtra transacciones por estado específico"
+          },
+          "response": []
+        },
+        {
+          "name": "Transacciones por Cliente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{transbank_url}}/listar?cliente_id={{test_client_id}}",
+              "host": ["{{transbank_url}}"],
+              "path": ["listar"],
+              "query": [
+                {
+                  "key": "cliente_id",
+                  "value": "{{test_client_id}}"
+                }
+              ]
+            },
+            "description": "Lista transacciones de un cliente específico"
+          },
+          "response": []
+        },
+        {
+          "name": "Estadísticas del Sistema",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{transbank_url}}/stats",
+              "host": ["{{transbank_url}}"],
+              "path": ["stats"]
+            },
+            "description": "Obtiene estadísticas generales del sistema"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📝 Logs y Auditoría",
+      "description": "Endpoints para auditoría y logs del sistema",
+      "item": [
+        {
+          "name": "Todos los Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{transbank_url}}/logs?limit=20",
+              "host": ["{{transbank_url}}"],
+              "path": ["logs"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Obtiene los logs más recientes del sistema"
+          },
+          "response": []
+        },
+        {
+          "name": "Logs por Transacción",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{transbank_url}}/logs?id_transaccion={{transaction_id}}",
+              "host": ["{{transbank_url}}"],
+              "path": ["logs"],
+              "query": [
+                {
+                  "key": "id_transaccion",
+                  "value": "{{transaction_id}}"
+                }
+              ]
+            },
+            "description": "Obtiene logs específicos de una transacción"
+          },
+          "response": []
+        },
+        {
+          "name": "Logs de Confirmaciones",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{transbank_url}}/logs?accion=CONFIRMAR_TRANSACCION&limit=10",
+              "host": ["{{transbank_url}}"],
+              "path": ["logs"],
+              "query": [
+                {
+                  "key": "accion",
+                  "value": "CONFIRMAR_TRANSACCION"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Filtra logs por tipo de acción específica"
+          },
+          "response": []
+        },
+        {
+          "name": "Logs de Errores",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{transbank_url}}/logs?accion=ERROR&limit=5",
+              "host": ["{{transbank_url}}"],
+              "path": ["logs"],
+              "query": [
+                {
+                  "key": "accion",
+                  "value": "ERROR"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Obtiene logs de errores del sistema"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🧪 Casos de Prueba",
+      "description": "Casos de prueba específicos para validar diferentes escenarios",
+      "item": [
+        {
+          "name": "Test: Stock Insuficiente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": {{test_client_id}},\n  \"ordenCompra\": \"TEST-STOCK-{{$timestamp}}\",\n  \"monto\": 1000000,\n  \"divisa\": \"CLP\",\n  \"detalles\": [\n    {\n      \"ID_Producto\": 1,\n      \"Cantidad\": 9999,\n      \"Precio_Unitario\": 100\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{transbank_url}}/iniciar",
+              "host": ["{{transbank_url}}"],
+              "path": ["iniciar"]
+            },
+            "description": "Prueba el manejo de stock insuficiente (debería fallar)"
+          },
+          "response": []
+        },
+        {
+          "name": "Test: Datos Inválidos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type", 
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"invalid\",\n  \"monto\": -100,\n  \"divisa\": \"INVALID\"\n}"
+            },
+            "url": {
+              "raw": "{{transbank_url}}/iniciar",
+              "host": ["{{transbank_url}}"],
+              "path": ["iniciar"]
+            },
+            "description": "Prueba el manejo de datos inválidos (debería fallar)"
+          },
+          "response": []
+        },
+        {
+          "name": "Test: Confirmar Transacción Inexistente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_transaccion\": 99999\n}"
+            },
+            "url": {
+              "raw": "{{transbank_url}}/confirmar",
+              "host": ["{{transbank_url}}"],
+              "path": ["confirmar"]
+            },
+            "description": "Prueba confirmar una transacción que no existe (debería fallar)"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Script que se ejecuta antes de cada request",
+          "console.log('Ejecutando request a:', pm.request.url.toString());"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript", 
+        "exec": [
+          "// Script que se ejecuta después de cada request",
+          "console.log('Response status:', pm.response.status);"
+        ]
+      }
+    }
+  ]
+}
