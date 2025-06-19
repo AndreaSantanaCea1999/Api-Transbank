@@ -118,16 +118,15 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ✅ FUNCIÓN CORREGIDA: Usar sequelize.authenticate() en lugar de db.testConnection()
+
 async function startServer() {
   try {
     console.log('🔄 Iniciando servidor...');
     
-    // ✅ CORRECCIÓN: Usar el método correcto de Sequelize
     await db.sequelize.authenticate();
     console.log('✅ Conexión a MySQL establecida correctamente');
     
-    // ✅ DESACTIVADO: No sincronizar tablas automáticamente (usar tablas existentes)
+ 
     console.log('📦 Usando tablas existentes (sin sincronización automática)');
     console.log('💡 Solo se usará la tabla "transacciones" existente');
 

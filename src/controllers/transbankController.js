@@ -365,31 +365,96 @@ async function paginaPagoWebPay(req, res) {
           e.target.value = value;
         });
         
-        // Procesar pago
+                // Procesar pago
         document.getElementById('paymentForm').addEventListener('submit', function(e) {
           e.preventDefault();
           
+          // Validar que el token existe
+          if (!token || token === '') {
+            alert('❌ Error: Token de transacción no válido. Recargue la página.');
+            return;
+          }
+          
+          // Validar datos del formulario
+          const cardNumber = document.getElementById('cardNumber').value.replace(/\\s/g, '');
+          const cardHolder = document.getElementById('cardHolder').value.trim();
+          const expiry = document.getElementById('expiry').value;
+          const cvv = document.getElementById('cvv').value;
+          
+          if (cardNumber.length < 13) {
+            alert('❌ Número de tarjeta inválido');
+            return;
+          }
+          
+          if (cardHolder.length < 2) {
+            alert('❌ Nombre del titular requerido');
+            return;
+          }
+          
+          if (expiry.length !== 5) {
+            alert('❌ Fecha de vencimiento inválida (MM/AA)');
+            return;
+          }
+          
+          if (cvv.length < 3) {
+            alert('❌ CVV inválido');
+            return;
+          }
+          
           // Simular procesamiento
           const btn = document.querySelector('.btn-pagar');
+          const originalText = btn.textContent;
           btn.textContent = '⏳ Procesando...';
           btn.disabled = true;
           
+          // Debug: Mostrar token en consola
+          console.log('🔍 Token a enviar:', token);
+          
           setTimeout(() => {
-            // Redirigir a confirmación exitosa
-            window.location.href = '/api/transbank/webpay/retorno?token=' + token + '&status=success';
+            try {
+              // Construir URL de retorno con validación
+              const returnUrl = '/api/transbank/webpay/retorno?token=' + encodeURIComponent(token) + '&status=success';
+              console.log('🚀 Redirigiendo a:', returnUrl);
+              
+              // Redirigir a confirmación exitosa
+              window.location.href = returnUrl;
+            } catch (error) {
+              console.error('❌ Error en redirección:', error);
+              alert('❌ Error procesando el pago. Intente nuevamente.');
+              btn.textContent = originalText;
+              btn.disabled = false;
+            }
           }, 2000);
         });
         
         function cancelarPago() {
           if (confirm('¿Está seguro que desea cancelar el pago?')) {
-            window.location.href = '/api/transbank/webpay/retorno?token=' + token + '&status=cancelled';
+            if (!token || token === '') {
+              alert('❌ Error: Token de transacción no válido.');
+              return;
+            }
+            // Construir URL de cancelación
+            const cancelUrl = '/api/transbank/webpay/retorno?token=' + encodeURIComponent(token) + '&status=cancelled';
+            console.log('❌ Cancelando, redirigiendo a:', cancelUrl);
+            window.location.href = cancelUrl;
           }
         }
+        
+        // Validación adicional al cargar la página
+        window.addEventListener('load', function() {
+          if (!token || token.length < 10) {
+            document.querySelector('.container').innerHTML = 
+              '<div style="text-align: center; padding: 40px;">' +
+              '<h1 style="color: #f44336;">❌ Error</h1>' +
+              '<p>Token de transacción inválido.</p>' +
+              '<p>Por favor, inicie una nueva transacción.</p>' +
+              '<a href="/" style="display: inline-block; padding: 12px 30px; background: #2196f3; color: white; text-decoration: none; border-radius: 4px; margin-top: 20px;">🏠 Volver a Inicio</a>' +
+              '</div>';
+          }
+        });
       </script>
     </body>
-    </html>`;
-
-    return res.send(html);
+    </html>`; return res.send(html);
     
   } catch (error) {
     console.error('❌ Error en paginaPagoWebPay:', error.message);
