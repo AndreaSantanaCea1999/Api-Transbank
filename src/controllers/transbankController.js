@@ -441,7 +441,7 @@ async function paginaPagoWebPay(req, res) {
         }
         
         // Validación adicional al cargar la página
-        window.addEventListener('load', function() {
+         window.addEventListener('load', function() {
           if (!token || token.length < 10) {
             document.querySelector('.container').innerHTML = 
               '<div style="text-align: center; padding: 40px;">' +
