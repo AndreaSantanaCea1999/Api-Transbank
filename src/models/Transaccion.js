@@ -30,7 +30,7 @@ module.exports = (sequelize, DataTypes) => {
     estadoId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      field: 'Estado_Id'
+      field: 'Estado_Id'  // debe ser igual a la FK en la tabla transbank_transacciones
     },
     detalles: {
       type: DataTypes.JSON,

@@ -1,11 +1,11 @@
-// controllers/transbankController.js
 const service = require('../services/transbankService');
-const { Transaccion, Logs, EstadoTransaccion } = require('../models');
+const { Transaccion, TransbankLog, EstadoTransaccion, DetalleTransaccion } = require('../models'); // agregué DetalleTransaccion
+const { Op } = require('sequelize');
 
 // Función auxiliar para manejar errores y logs
 async function logearAccion(req, accion, descripcion, datosEntrada, datosSalida, codigoRespuesta, mensajeError = null, idTransaccion = null, duracion = 0) {
   try {
-    await Logs.create({
+    await TransbankLog.create({
       ID_Transaccion: idTransaccion,
       Accion: accion,
       Descripcion: descripcion,
@@ -13,7 +13,7 @@ async function logearAccion(req, accion, descripcion, datosEntrada, datosSalida,
       Datos_Salida: datosSalida ? JSON.stringify(datosSalida) : null,
       Codigo_Respuesta: codigoRespuesta,
       Mensaje_Error: mensajeError,
-      IP_Origen: req.ip || req.connection.remoteAddress,
+      IP_Origen: req.headers['x-forwarded-for'] || req.ip || req.connection.remoteAddress,
       User_Agent: req.headers['user-agent'] || 'Unknown',
       Duracion_MS: duracion
     });
@@ -22,397 +22,409 @@ async function logearAccion(req, accion, descripcion, datosEntrada, datosSalida,
   }
 }
 
-// Inicia una nueva transacción
-async function iniciarTransaccion(req, res) {
+// Iniciar pago WebPay
+async function iniciarPagoWebPay(req, res) {
   const start = Date.now();
-  let transaccion = null;
   
   try {
-    console.log('🚀 [iniciarTransaccion] Iniciando nueva transacción...');
+    console.log('💳 [iniciarPagoWebPay] Iniciando pago con WebPay...');
     
-    // Validar datos de entrada
-    const { clienteId, ordenCompra, monto, divisa, detalles } = req.body;
+    const { clienteId, productos, email, returnUrl } = req.body;
     
-    if (!clienteId || !ordenCompra || !monto || !divisa) {
-      const error = 'Faltan campos requeridos: clienteId, ordenCompra, monto, divisa';
-      await logearAccion(req, 'INICIAR_TRANSACCION', 'Validación fallida', req.body, null, '400', error, null, Date.now() - start);
-      return res.status(400).json({ 
-        success: false, 
-        message: error,
-        required_fields: ['clienteId', 'ordenCompra', 'monto', 'divisa']
-      });
+    if (!clienteId || !productos || productos.length === 0) {
+      await logearAccion(req, 'INICIAR_PAGO_WEBPAY', 'Datos inválidos', req.body, null, '400', 'clienteId y productos son requeridos', null, Date.now() - start);
+      return res.status(400).json({ success: false, message: 'clienteId y productos son requeridos' });
     }
 
-    if (monto <= 0) {
-      const error = 'El monto debe ser mayor a 0';
-      await logearAccion(req, 'INICIAR_TRANSACCION', 'Monto inválido', req.body, null, '400', error, null, Date.now() - start);
-      return res.status(400).json({ success: false, message: error });
-    }
+    // Crear transacción con WebPay en el servicio
+    const resultado = await service.crearTransaccionWebPay({
+      clienteId,
+      productos,
+      email,
+      returnUrl: returnUrl || `http://localhost:3003/api/transbank/webpay/retorno`
+    });
 
-    // Validar detalles si existen
-    if (detalles && Array.isArray(detalles)) {
-      for (let i = 0; i < detalles.length; i++) {
-        const item = detalles[i];
-        if (!item.ID_Producto || !item.Cantidad || item.Cantidad <= 0) {
-          const error = `Detalle ${i + 1}: ID_Producto y Cantidad son requeridos y Cantidad debe ser > 0`;
-          await logearAccion(req, 'INICIAR_TRANSACCION', 'Detalle inválido', req.body, null, '400', error, null, Date.now() - start);
-          return res.status(400).json({ success: false, message: error });
-        }
-      }
-    }
+    await logearAccion(req, 'INICIAR_PAGO_WEBPAY', 'Pago WebPay iniciado', req.body, resultado.webpay, '201', null, resultado.transaccion.id, Date.now() - start);
 
-    transaccion = await service.crearTransaccion(req.body);
-
-    await logearAccion(req, 'INICIAR_TRANSACCION', 'Transacción creada exitosamente', req.body, transaccion, '201', null, transaccion.id, Date.now() - start);
-
-    return res.status(201).json({ 
-      success: true, 
-      message: 'Transacción creada exitosamente',
+    return res.status(201).json({
+      success: true,
+      message: 'Transacción WebPay iniciada. Redirigir al usuario a la URL de pago.',
       transaccion: {
-        id: transaccion.id,
-        ordenCompra: transaccion.ordenCompra,
-        monto: transaccion.monto,
-        divisa: transaccion.divisa,
-        estado: 'Pendiente',
-        createdAt: transaccion.createdAt
+        id: resultado.transaccion.id,
+        ordenCompra: resultado.transaccion.ordenCompra,
+        monto: resultado.transaccion.monto,
+        estado: 'Pendiente'
+      },
+      webpay: {
+        url: resultado.webpay.url,
+        token: resultado.webpay.token
       }
     });
   } catch (error) {
-    console.error('❌ Error en iniciarTransaccion:', error.message);
-    
-    await logearAccion(req, 'INICIAR_TRANSACCION', 'Error al crear transacción', req.body, null, '500', error.message, transaccion?.id, Date.now() - start);
-    
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Error interno del servidor al crear transacción',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Error interno'
-    });
+    console.error('❌ Error en iniciarPagoWebPay:', error.message);
+    await logearAccion(req, 'INICIAR_PAGO_WEBPAY', 'Error al iniciar pago', req.body, null, '500', error.message, null, Date.now() - start);
+    return res.status(500).json({ success: false, message: 'Error al iniciar pago con WebPay', error: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 }
 
-// Confirma la transacción y orquesta Banco + Inventario
+// Página de pago WebPay simulada
+async function paginaPagoWebPay(req, res) {
+  try {
+    const { token } = req.query;
+
+    const html = `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <title>WebPay - Pago Seguro</title>
+      <style>
+        body { font-family: Arial; background: #f5f5f5; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { background: white; padding: 30px; border-radius: 8px; max-width: 400px; width: 100%; box-shadow: 0 2px 10px rgba(0,0,0,0.1);}
+        h1 { color: #d32f2f; margin-bottom: 20px; text-align: center;}
+        .info { background: #e3f2fd; padding: 15px; border-left: 4px solid #2196f3; margin-bottom: 20px; font-size: 14px; }
+        label { display: block; margin-bottom: 5px; font-size: 14px; color: #666; }
+        input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; box-sizing: border-box; }
+        .buttons { display: flex; gap: 10px; }
+        button { flex: 1; padding: 12px; font-size: 16px; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.3s;}
+        .btn-pagar { background-color: #4caf50; color: white; }
+        .btn-pagar:hover { background-color: #45a049; }
+        .btn-cancelar { background-color: #f44336; color: white; }
+        .btn-cancelar:hover { background-color: #da190b; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1>WebPay Plus</h1>
+        <div class="info"><strong>Modo de prueba:</strong> Use cualquier número de tarjeta para simular el pago.</div>
+        <form id="paymentForm">
+          <label for="cardNumber">Número de Tarjeta</label>
+          <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19" required>
+          <label for="cardHolder">Nombre del Titular</label>
+          <input type="text" id="cardHolder" placeholder="JUAN PEREZ" required>
+          <label for="expiry">Fecha de Vencimiento</label>
+          <input type="text" id="expiry" placeholder="MM/AA" maxlength="5" required>
+          <label for="cvv">CVV</label>
+          <input type="text" id="cvv" placeholder="123" maxlength="3" required>
+          <div class="buttons">
+            <button type="submit" class="btn-pagar">Pagar</button>
+            <button type="button" class="btn-cancelar" onclick="cancelar()">Cancelar</button>
+          </div>
+        </form>
+      </div>
+      <script>
+        document.getElementById('paymentForm').addEventListener('submit', function(e) {
+          e.preventDefault();
+          document.querySelector('.btn-pagar').textContent = 'Procesando...';
+          document.querySelector('.btn-pagar').disabled = true;
+          setTimeout(() => {
+            window.location.href = '/api/transbank/webpay/retorno?token=${token}&status=success';
+          }, 2000);
+        });
+        function cancelar() {
+          window.location.href = '/api/transbank/webpay/retorno?token=${token}&status=cancelled';
+        }
+        document.getElementById('cardNumber').addEventListener('input', function(e) {
+          let value = e.target.value.replace(/\\s/g, '');
+          let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
+          e.target.value = formattedValue;
+        });
+        document.getElementById('expiry').addEventListener('input', function(e) {
+          let value = e.target.value.replace(/\\D/g, '');
+          if (value.length >= 2) {
+            value = value.slice(0, 2) + '/' + value.slice(2, 4);
+          }
+          e.target.value = value;
+        });
+      </script>
+    </body>
+    </html>
+    `;
+    res.send(html);
+  } catch (error) {
+    console.error('❌ Error en paginaPagoWebPay:', error);
+    res.status(500).send('Error al cargar página de pago');
+  }
+}
+
+// Retorno WebPay (exitoso o cancelado)
+async function retornoWebPay(req, res) {
+  const start = Date.now();
+  
+  try {
+    console.log('🔄 [retornoWebPay] Procesando retorno de WebPay...');
+    
+    const { token, status } = req.query;
+    
+    if (!token) return res.status(400).send('Token no válido');
+
+    // Obtener transacción reciente para el token (simulado)
+    const transaccion = await Transaccion.findOne({ order: [['createdAt', 'DESC']] });
+    if (!transaccion) return res.status(404).send('Transacción no encontrada');
+
+    if (status === 'success') {
+      const resultado = await service.confirmarTransaccion(transaccion.id, {
+        token,
+        response: {
+          status: 'AUTHORIZED',
+          amount: transaccion.monto
+        }
+      });
+      await logearAccion(req, 'RETORNO_WEBPAY_EXITOSO', 'Pago completado exitosamente', { token, status }, resultado, '200', null, transaccion.id, Date.now() - start);
+
+      const html = `
+      <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Pago Exitoso - FERREMAS</title><style>
+      body{font-family: Arial;background:#f5f5f5;margin:0;padding:20px;display:flex;justify-content:center;align-items:center;min-height:100vh;}
+      .container{background:#fff;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);padding:40px;text-align:center;max-width:500px;}
+      .icon{font-size:72px;color:#4caf50;margin-bottom:20px;}
+      h1{color:#333;margin-bottom:10px;}
+      .info-box{background:#f5f5f5;padding:20px;border-radius:4px;margin:20px 0;}
+      .btn{display:inline-block;padding:12px 30px;background:#2196f3;color:#fff;text-decoration:none;border-radius:4px;margin-top:20px;}
+      </style></head><body><div class="container">
+      <div class="icon">✓</div><h1>¡Pago Exitoso!</h1><p>Tu compra ha sido procesada correctamente.</p>
+      <div class="info-box">
+        <h3>Detalles de la Orden</h3>
+        <p><strong>N° Orden:</strong> ${transaccion.ordenCompra}</p>
+        <p><strong>Monto:</strong> $${Number(transaccion.monto).toLocaleString('es-CL')} CLP</p>
+        <p><strong>Estado:</strong> Por despachar</p>
+      </div>
+      <p>Recibirás un correo con los detalles de tu pedido.</p>
+      <p>Tu pedido será despachado en las próximas 48-72 horas.</p>
+      <a href="/" class="btn">Volver a la Tienda</a>
+      </div></body></html>`;
+
+      return res.send(html);
+    } else {
+      await logearAccion(req, 'RETORNO_WEBPAY_CANCELADO', 'Pago cancelado por el usuario', { token, status }, null, '200', null, transaccion.id, Date.now() - start);
+
+      const html = `
+      <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Pago Cancelado - FERREMAS</title><style>
+      body{font-family: Arial;background:#f5f5f5;margin:0;padding:20px;display:flex;justify-content:center;align-items:center;min-height:100vh;}
+      .container{background:#fff;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);padding:40px;text-align:center;max-width:500px;}
+      .icon{font-size:72px;color:#f44336;margin-bottom:20px;}
+      h1{color:#333;margin-bottom:10px;}
+      .btn{display:inline-block;padding:12px 30px;background:#2196f3;color:#fff;text-decoration:none;border-radius:4px;margin-top:20px;}
+      </style></head><body><div class="container">
+      <div class="icon">✕</div><h1>Pago Cancelado</h1><p>El proceso de pago ha sido cancelado.</p>
+      <p>Tu carrito de compras ha sido guardado y puedes intentar nuevamente cuando lo desees.</p>
+      <a href="/" class="btn">Volver a la Tienda</a>
+      </div></body></html>`;
+
+      return res.send(html);
+    }
+  } catch (error) {
+    console.error('❌ Error en retornoWebPay:', error.message);
+    await logearAccion(req, 'ERROR_RETORNO_WEBPAY', 'Error procesando retorno', req.query, null, '500', error.message, null, Date.now() - start);
+    return res.status(500).send('Error procesando el pago. Por favor, contacte a soporte.');
+  }
+}
+
+// Confirmar transacción con datos WebPay
 async function confirmar(req, res) {
   const start = Date.now();
   
   try {
-    console.log('🚀 [confirmar] Confirmando transacción...');
+    console.log('✅ [confirmar] Confirmando transacción...');
     
-    const { id_transaccion } = req.body;
+    const { id_transaccion, webpay_token, webpay_response } = req.body;
     
     if (!id_transaccion) {
       await logearAccion(req, 'CONFIRMAR_TRANSACCION', 'ID de transacción faltante', req.body, null, '400', 'id_transaccion es requerido', null, Date.now() - start);
-      return res.status(400).json({ 
-        success: false, 
-        message: 'id_transaccion es requerido' 
-      });
+      return res.status(400).json({ success: false, message: 'id_transaccion es requerido' });
     }
 
-    // Verificar que la transacción existe y está en estado válido
     const transaccion = await Transaccion.findByPk(id_transaccion, {
       include: [{ model: EstadoTransaccion, as: 'estado' }]
     });
-
     if (!transaccion) {
       await logearAccion(req, 'CONFIRMAR_TRANSACCION', 'Transacción no encontrada', req.body, null, '404', 'Transacción no existe', id_transaccion, Date.now() - start);
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Transacción no encontrada' 
-      });
+      return res.status(404).json({ success: false, message: 'Transacción no encontrada' });
     }
 
-    if (transaccion.estado && transaccion.estado.nombre !== 'Pendiente') {
-      const error = `Transacción ya está en estado: ${transaccion.estado.nombre}`;
+    if (transaccion.estado && transaccion.estado.nombreEstado !== 'Pendiente') {
+  const error = `Transacción ya está en estado: ${transaccion.estado.nombreEstado}`;
       await logearAccion(req, 'CONFIRMAR_TRANSACCION', 'Estado inválido para confirmación', req.body, null, '400', error, id_transaccion, Date.now() - start);
-      return res.status(400).json({ 
-        success: false, 
-        message: error
-      });
-    }
+         return res.status(400).json({ success: false, message: error });  }
 
-    const resultado = await service.confirmarTransaccion(id_transaccion);
+    const webpayData = webpay_token ? {
+      token: webpay_token,
+      response: webpay_response
+    } : null;
+
+    const resultado = await service.confirmarTransaccion(id_transaccion, webpayData);
 
     await logearAccion(req, 'CONFIRMAR_TRANSACCION', 'Transacción confirmada exitosamente', req.body, resultado, '200', null, id_transaccion, Date.now() - start);
 
     return res.status(200).json({
       success: true,
-      message: 'Transacción confirmada exitosamente. Pago registrado y stock actualizado.',
+      message: resultado.mensaje,
       data: {
         transaccion: resultado.transaccion,
         pago_registrado: !!resultado.pago,
         pedido_creado: !!resultado.pedido,
+        pedido_estado: 'POR_DESPACHAR',
+        webpay: resultado.webpay,
         timestamp: new Date().toISOString()
       }
     });
   } catch (err) {
     console.error('❌ Error en confirmar:', err.message);
-    
     await logearAccion(req, 'CONFIRMAR_TRANSACCION', 'Error al confirmar transacción', req.body, null, '500', err.message, req.body.id_transaccion, Date.now() - start);
-    
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Error interno al confirmar transacción',
-      error: process.env.NODE_ENV === 'development' ? err.message : 'Error interno'
-    });
+    return res.status(500).json({ success: false, message: 'Error interno al confirmar transacción', error: process.env.NODE_ENV === 'development' ? err.message : 'Error interno' });
   }
 }
 
-// Registra el detalle (items) de la transacción
-async function detalle(req, res) {
-  const start = Date.now();
-  
+// Obtener pedidos por despachar (solo admin)
+async function obtenerPedidosPorDespachar(req, res) {
   try {
-    console.log('🚀 [detalle] Registrando detalle de transacción...');
+    console.log('📋 [obtenerPedidosPorDespachar] Consultando pedidos...');
     
-    const { id_transaccion, detalles } = req.body;
-    
-    if (!id_transaccion || !detalles || !Array.isArray(detalles)) {
-      await logearAccion(req, 'REGISTRAR_DETALLE', 'Datos inválidos', req.body, null, '400', 'id_transaccion y detalles (array) son requeridos', null, Date.now() - start);
-      return res.status(400).json({ 
-        success: false, 
-        message: 'id_transaccion y detalles (array) son requeridos' 
-      });
+    const esAdmin = req.headers['x-admin-token'] || req.query.admin === 'true';
+    if (!esAdmin) {
+      return res.status(403).json({ success: false, message: 'Acceso denegado. Se requieren privilegios de administrador.' });
     }
 
-    await service.registrarDetalle(id_transaccion, detalles);
+    const filtros = {
+      clienteId: req.query.cliente_id,
+      fecha_desde: req.query.fecha_desde,
+      fecha_hasta: req.query.fecha_hasta,
+      limit: parseInt(req.query.limit) || 50
+    };
 
-    await logearAccion(req, 'REGISTRAR_DETALLE', 'Detalle registrado exitosamente', req.body, { detalles_count: detalles.length }, '200', null, id_transaccion, Date.now() - start);
+    const pedidos = await service.obtenerPedidosPorDespachar(filtros);
 
-    return res.json({ 
-      success: true, 
-      message: `Detalle registrado exitosamente. ${detalles.length} items procesados.`,
-      items_procesados: detalles.length
+    return res.status(200).json({
+      success: true,
+      message: 'Pedidos por despachar obtenidos exitosamente',
+      total: pedidos.length,
+      pedidos,
+      filtros_aplicados: filtros
     });
-  } catch (err) {
-    console.error('❌ Error en detalle:', err.message);
-    
-    await logearAccion(req, 'REGISTRAR_DETALLE', 'Error al registrar detalle', req.body, null, '500', err.message, req.body.id_transaccion, Date.now() - start);
-    
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Error interno al registrar detalle',
-      error: process.env.NODE_ENV === 'development' ? err.message : 'Error interno'
-    });
+  } catch (error) {
+    console.error('❌ Error en obtenerPedidosPorDespachar:', error.message);
+    return res.status(500).json({ success: false, message: 'Error al obtener pedidos por despachar', error: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 }
 
-// Obtiene el estado completo de una transacción
-async function obtenerEstado(req, res) {
+// Obtener historial compras por cliente
+async function obtenerHistorialCompras(req, res) {
+  try {
+    const { clienteId } = req.params;
+    if (!clienteId || isNaN(clienteId)) {
+      return res.status(400).json({ success: false, message: 'ID de cliente inválido' });
+    }
+
+    const historial = await service.obtenerHistorialCompras(clienteId);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Historial de compras obtenido exitosamente',
+      cliente_id: clienteId,
+      total_compras: historial.length,
+      compras: historial
+    });
+  } catch (error) {
+    console.error('❌ Error en obtenerHistorialCompras:', error.message);
+    return res.status(500).json({ success: false, message: 'Error al obtener historial de compras', error: process.env.NODE_ENV === 'development' ? error.message : undefined });
+  }
+}
+
+// Anular o reembolsar transacción
+async function anularTransaccion(req, res) {
+  const start = Date.now();
   try {
     const { id } = req.params;
-    
-    if (!id || isNaN(id)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'ID de transacción inválido' 
-      });
+
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'ID de transacción es requerido' });
     }
 
-    const transaccion = await Transaccion.findByPk(id, {
-      include: [
-        { 
-          model: EstadoTransaccion, 
-          as: 'estado',
-          attributes: ['id', 'nombre', 'descripcion']
-        }
-      ],
-      attributes: ['id', 'clienteId', 'ordenCompra', 'monto', 'divisa', 'detalles', 'createdAt', 'updatedAt']
-    });
-    
-    if (!transaccion) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Transacción no encontrada' 
-      });
-    }
+    const resultado = await service.anularTransaccion(id);
 
-    return res.json({ 
-      success: true, 
-      transaccion: {
-        ...transaccion.toJSON(),
-        total_items: transaccion.detalles ? transaccion.detalles.length : 0
-      }
+    await logearAccion(req, 'ANULAR_TRANSACCION', `Transacción ${id} anulada`, { id }, resultado, '200', null, id, Date.now() - start);
+
+    return res.status(200).json({
+      success: true,
+      message: `Transacción ${id} anulada exitosamente`,
+      data: resultado
     });
-  } catch (err) {
-    console.error('❌ Error en obtenerEstado:', err.message);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Error interno al obtener estado',
-      error: process.env.NODE_ENV === 'development' ? err.message : 'Error interno'
-    });
+  } catch (error) {
+    console.error('❌ Error en anularTransaccion:', error.message);
+    await logearAccion(req, 'ANULAR_TRANSACCION', 'Error al anular transacción', req.params, null, '500', error.message, req.params.id, Date.now() - start);
+    return res.status(500).json({ success: false, message: 'Error al anular transacción', error: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 }
 
-// Lista todos los logs con filtros opcionales
-async function obtenerLogs(req, res) {
-  try {
-    const { accion, id_transaccion, fecha_inicio, fecha_fin, limit = 50, offset = 0 } = req.query;
-    
-    const whereClause = {};
-    
-    if (accion) whereClause.Accion = accion;
-    if (id_transaccion) whereClause.ID_Transaccion = id_transaccion;
-    if (fecha_inicio && fecha_fin) {
-      whereClause.Fecha_Log = {
-        [require('sequelize').Op.between]: [new Date(fecha_inicio), new Date(fecha_fin)]
-      };
-    }
-
-    const logs = await Logs.findAndCountAll({
-      where: whereClause,
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-      order: [['Fecha_Log', 'DESC']],
-      attributes: {
-        exclude: ['Datos_Entrada', 'Datos_Salida'] // Excluir campos grandes por defecto
-      }
-    });
-
-    return res.json({ 
-      success: true, 
-      logs: logs.rows,
-      total: logs.count,
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-      has_more: logs.count > (parseInt(offset) + parseInt(limit))
-    });
-  } catch (err) {
-    console.error('❌ Error en obtenerLogs:', err.message);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Error interno al obtener logs',
-      error: process.env.NODE_ENV === 'development' ? err.message : 'Error interno'
-    });
-  }
-}
-
-// Lista todas las transacciones con su estado
+// Listar transacciones con su estado (endpoint nuevo para pruebas)
 async function listarTransacciones(req, res) {
   try {
-    const { estado, cliente_id, fecha_inicio, fecha_fin, limit = 20, offset = 0 } = req.query;
-    
-    const whereClause = {};
-    const includeClause = [{ 
-      model: EstadoTransaccion, 
-      as: 'estado',
-      attributes: ['id', 'nombre', 'descripcion']
-    }];
-    
-    if (estado) {
-      includeClause[0].where = { nombre: estado };
-    }
-    if (cliente_id) whereClause.clienteId = cliente_id;
-    if (fecha_inicio && fecha_fin) {
-      whereClause.createdAt = {
-        [require('sequelize').Op.between]: [new Date(fecha_inicio), new Date(fecha_fin)]
-      };
-    }
-
-    const transacciones = await Transaccion.findAndCountAll({
-      where: whereClause,
-      include: includeClause,
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-      order: [['createdAt', 'DESC']],
-      attributes: ['id', 'clienteId', 'ordenCompra', 'monto', 'divisa', 'createdAt', 'updatedAt']
+    const transacciones = await Transaccion.findAll({
+      include: [{
+        model: EstadoTransaccion,
+        as: 'estado',
+        attributes: ['codigoEstado', 'nombreEstado', 'descripcion']      }]
     });
-
-    return res.json({ 
-      success: true, 
-      transacciones: transacciones.rows,
-      total: transacciones.count,
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-      has_more: transacciones.count > (parseInt(offset) + parseInt(limit))
-    });
-  } catch (err) {
-    console.error('❌ Error en listarTransacciones:', err.message);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Error interno al listar transacciones',
-      error: process.env.NODE_ENV === 'development' ? err.message : 'Error interno'
-    });
+    return res.json(transacciones);
+  } catch (error) {
+    console.error('❌ Error listando transacciones:', error.message);
+    return res.status(500).json({ error: 'Error al obtener transacciones' });
   }
 }
 
-// NUEVO: Verificar salud de las conexiones con APIs externas
-async function verificarSalud(req, res) {
+// Crear transacción directamente (usada en POST /transacciones)
+async function crearTransaccion(req, res) {
+  const start = Date.now();
   try {
-    console.log('🏥 [verificarSalud] Verificando conexiones...');
-    
-    const conexiones = await service.verificarConexiones();
-    const todasSaludables = conexiones.inventario && conexiones.banco;
-    
-    return res.status(todasSaludables ? 200 : 503).json({
-      success: todasSaludables,
-      message: todasSaludables ? 'Todas las conexiones están saludables' : 'Algunas conexiones fallan',
-      servicios: {
-        api_inventario: {
-          status: conexiones.inventario ? 'UP' : 'DOWN',
-          url: process.env.INVENTORY_API_URL
-        },
-        api_banco: {
-          status: conexiones.banco ? 'UP' : 'DOWN',
-          url: process.env.BANK_API_URL
-        },
-        base_datos: {
-          status: 'UP', // Si llegamos aquí, la BD está OK
-          host: process.env.DB_HOST
-        }
-      },
-      timestamp: conexiones.timestamp
-    });
-  } catch (err) {
-    console.error('❌ Error en verificarSalud:', err.message);
-    return res.status(500).json({
-      success: false,
-      message: 'Error verificando salud del sistema',
-      error: process.env.NODE_ENV === 'development' ? err.message : 'Error interno'
-    });
-  }
-}
+    const { clienteId, ordenCompra, monto, divisa, estadoId, detalles } = req.body;
 
-// NUEVO: Obtener estadísticas rápidas
-async function obtenerEstadisticas(req, res) {
-  try {
-    const stats = await Promise.all([
-      Transaccion.count(),
-      Transaccion.count({ include: [{ model: EstadoTransaccion, as: 'estado', where: { nombre: 'Aprobado' } }] }),
-      Transaccion.count({ include: [{ model: EstadoTransaccion, as: 'estado', where: { nombre: 'Pendiente' } }] }),
-      Transaccion.count({ include: [{ model: EstadoTransaccion, as: 'estado', where: { nombre: 'Rechazado' } }] }),
-      Logs.count(),
-      Transaccion.sum('monto', { include: [{ model: EstadoTransaccion, as: 'estado', where: { nombre: 'Aprobado' } }] })
-    ]);
+    // Validación básica
+    if (!clienteId || !ordenCompra || !monto || !estadoId) {
+      await logearAccion(req, 'CREAR_TRANSACCION', 'Datos incompletos para crear transacción', req.body, null, '400', 'Faltan campos requeridos', null, Date.now() - start);
+      return res.status(400).json({ success: false, message: 'clienteId, ordenCompra, monto y estadoId son requeridos' });
+    }
 
-    return res.json({
+    // Crear la transacción
+    const transaccion = await Transaccion.create({
+      clienteId,
+      ordenCompra,
+      monto,
+      divisa: divisa || 'CLP',
+      estadoId
+    });
+
+    // Crear detalles si existen (suponemos array de detalles)
+    if (Array.isArray(detalles) && detalles.length > 0) {
+      for (const detalle of detalles) {
+        await DetalleTransaccion.create({
+          TransaccionId: transaccion.id,
+          producto: detalle.producto,
+          cantidad: detalle.cantidad
+        });
+      }
+    }
+
+    await logearAccion(req, 'CREAR_TRANSACCION', 'Transacción creada manualmente', req.body, transaccion, '201', null, transaccion.id, Date.now() - start);
+
+    return res.status(201).json({
       success: true,
-      estadisticas: {
-        total_transacciones: stats[0] || 0,
-        transacciones_aprobadas: stats[1] || 0,
-        transacciones_pendientes: stats[2] || 0,
-        transacciones_rechazadas: stats[3] || 0,
-        total_logs: stats[4] || 0,
-        monto_total_aprobado: parseFloat(stats[5] || 0),
-        tasa_aprobacion: stats[0] > 0 ? ((stats[1] / stats[0]) * 100).toFixed(2) + '%' : '0%'
-      },
-      timestamp: new Date().toISOString()
+      message: 'Transacción creada correctamente',
+      transaccion
     });
-  } catch (err) {
-    console.error('❌ Error en obtenerEstadisticas:', err.message);
-    return res.status(500).json({
-      success: false,
-      message: 'Error obteniendo estadísticas',
-      error: process.env.NODE_ENV === 'development' ? err.message : 'Error interno'
-    });
+  } catch (error) {
+    console.error('❌ Error en crearTransaccion:', error.message);
+    await logearAccion(req, 'CREAR_TRANSACCION', 'Error creando transacción', req.body, null, '500', error.message, null, Date.now() - start);
+    return res.status(500).json({ success: false, message: 'Error al crear transacción', error: process.env.NODE_ENV === 'development' ? error.message : undefined });
   }
 }
 
 module.exports = {
-  iniciarTransaccion,
+  iniciarPagoWebPay,
+  paginaPagoWebPay,
+  retornoWebPay,
   confirmar,
-  detalle,
-  obtenerEstado,
-  obtenerLogs,
+  obtenerPedidosPorDespachar,
+  obtenerHistorialCompras,
+  anularTransaccion,
   listarTransacciones,
-  verificarSalud,
-  obtenerEstadisticas
+  crearTransaccion
 };

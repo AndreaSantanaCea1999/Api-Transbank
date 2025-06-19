@@ -48,24 +48,20 @@ fs
     try {
       const modelPath = path.join(__dirname, file);
       let model;
-      
-      // Intentar importar el modelo - manejar diferentes formatos de exportación
+
       const modelModule = require(modelPath);
-      
+
       if (typeof modelModule === 'function') {
-        // Formato: module.exports = (sequelize, DataTypes) => { ... }
         model = modelModule(sequelize, Sequelize.DataTypes);
       } else if (modelModule.default && typeof modelModule.default === 'function') {
-        // Formato ES6: export default function(sequelize, DataTypes) { ... }
         model = modelModule.default(sequelize, Sequelize.DataTypes);
       } else if (modelModule.name) {
-        // Modelo ya definido: const Model = sequelize.define(...)
         model = modelModule;
       } else {
         console.warn(`⚠️ Modelo en ${file} no pudo ser importado correctamente`);
         return;
       }
-      
+
       if (model && model.name) {
         db[model.name] = model;
         console.log(`✅ Modelo ${model.name} cargado desde ${file}`);
@@ -89,7 +85,7 @@ Object.keys(db).forEach(modelName => {
   }
 });
 
-// Configurar relaciones específicas de Transbank
+// Relación Transaccion <-> EstadoTransaccion
 if (db.Transaccion && db.EstadoTransaccion) {
   db.Transaccion.belongsTo(db.EstadoTransaccion, {
     foreignKey: 'estadoId',
@@ -102,6 +98,7 @@ if (db.Transaccion && db.EstadoTransaccion) {
   console.log('🔗 Relación Transaccion <-> EstadoTransaccion configurada');
 }
 
+// Relación TransbankLog <-> Transaccion
 if (db.TransbankLog && db.Transaccion) {
   db.TransbankLog.belongsTo(db.Transaccion, {
     foreignKey: 'ID_Transaccion',
@@ -114,22 +111,20 @@ if (db.TransbankLog && db.Transaccion) {
   console.log('🔗 Relación TransbankLog <-> Transaccion configurada');
 }
 
-// Añadir instancia de Sequelize y constructor al objeto db
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
-// Función para sincronizar la base de datos
+// 🔄 Sincronizar base de datos
 db.sync = async (options = {}) => {
   try {
     console.log('🔄 Sincronizando base de datos...');
     await sequelize.sync(options);
     console.log('✅ Base de datos sincronizada correctamente');
-    
-    // Crear estados por defecto si no existen
+
     if (db.EstadoTransaccion) {
       await crearEstadosPorDefecto();
     }
-    
+
     return true;
   } catch (error) {
     console.error('❌ Error sincronizando base de datos:', error);
@@ -137,31 +132,61 @@ db.sync = async (options = {}) => {
   }
 };
 
-// Función para crear estados de transacción por defecto
+// ✅ Crear estados de transacción por defecto (corregido)
 async function crearEstadosPorDefecto() {
   try {
     const estadosDefecto = [
-      { nombre: 'Pendiente', descripcion: 'Transacción creada, esperando confirmación' },
-      { nombre: 'Aprobado', descripcion: 'Transacción aprobada y procesada exitosamente' },
-      { nombre: 'Rechazado', descripcion: 'Transacción rechazada por error de pago o validación' },
-      { nombre: 'Cancelado', descripcion: 'Transacción cancelada por el usuario' },
-      { nombre: 'Reembolsado', descripcion: 'Transacción reembolsada exitosamente' }
+      {
+        codigoEstado: 'PEND',
+        nombreEstado: 'Pendiente',
+        descripcion: 'Transacción creada, esperando confirmación',
+        esFinal: false,
+        esExitoso: false
+      },
+      {
+        codigoEstado: 'APRO',
+        nombreEstado: 'Aprobado',
+        descripcion: 'Transacción aprobada y procesada exitosamente',
+        esFinal: true,
+        esExitoso: true
+      },
+      {
+        codigoEstado: 'RECH',
+        nombreEstado: 'Rechazado',
+        descripcion: 'Transacción rechazada por error de pago o validación',
+        esFinal: true,
+        esExitoso: false
+      },
+      {
+        codigoEstado: 'CANC',
+        nombreEstado: 'Cancelado',
+        descripcion: 'Transacción cancelada por el usuario',
+        esFinal: true,
+        esExitoso: false
+      },
+      {
+        codigoEstado: 'REEM',
+        nombreEstado: 'Reembolsado',
+        descripcion: 'Transacción reembolsada exitosamente',
+        esFinal: true,
+        esExitoso: true
+      }
     ];
 
     for (const estado of estadosDefecto) {
       await db.EstadoTransaccion.findOrCreate({
-        where: { nombre: estado.nombre },
+        where: { codigoEstado: estado.codigoEstado },
         defaults: estado
       });
     }
-    
+
     console.log('✅ Estados de transacción por defecto verificados/creados');
   } catch (error) {
     console.error('❌ Error creando estados por defecto:', error.message);
   }
 }
 
-// Función para verificar conexión
+// Conexión
 db.testConnection = async () => {
   try {
     await sequelize.authenticate();
@@ -173,7 +198,7 @@ db.testConnection = async () => {
   }
 };
 
-// Función para cerrar conexión
+// Cerrar conexión
 db.close = async () => {
   try {
     await sequelize.close();

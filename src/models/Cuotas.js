@@ -1,12 +1,35 @@
+module.exports = (sequelize, DataTypes) => {
+  const { Model } = require('sequelize');
 
-// === src/models/Cuotas.js ===
-const { DataTypes } = require('sequelize');
-const sequelize = require('../database');
+  class Cuotas extends Model {
+    static associate(models) {
+      this.belongsTo(models.Transaccion, {
+        foreignKey: 'id_transaccion',
+        as: 'transaccion'
+      });
+    }
+  }
 
-const Cuotas = sequelize.define('transbank_cuotas', {
-  id_cuota: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-  id_transaccion: { type: DataTypes.INTEGER },
-  cantidad_cuotas: { type: DataTypes.INTEGER },
-});
+  Cuotas.init({
+    id_cuota: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
+    },
+    id_transaccion: {
+      type: DataTypes.INTEGER,
+      allowNull: false
+    },
+    cantidad_cuotas: {
+      type: DataTypes.INTEGER,
+      allowNull: false
+    }
+  }, {
+    sequelize,
+    modelName: 'Cuotas',
+    tableName: 'transbank_cuotas',
+    timestamps: false
+  });
 
-module.exports = Cuotas;
+  return Cuotas;
+};

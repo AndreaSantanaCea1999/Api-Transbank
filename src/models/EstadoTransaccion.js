@@ -5,21 +5,37 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
-      field: 'ID'
+      field: 'ID_Estado'
     },
-    nombre: {
+    codigoEstado: {
+      type: DataTypes.STRING(10),
+      allowNull: false,
+      unique: true,
+      field: 'Codigo_Estado'
+    },
+    nombreEstado: {
       type: DataTypes.STRING(50),
       allowNull: false,
       unique: true,
-      field: 'Nombre'
+      field: 'Nombre_Estado'
     },
     descripcion: {
       type: DataTypes.STRING(255),
       allowNull: true,
       field: 'Descripcion'
+    },
+    esFinal: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      field: 'Es_Final'
+    },
+    esExitoso: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      field: 'Es_Exitoso'
     }
   }, {
-    tableName: 'estados_transaccion',
+    tableName: 'transbank_estados_transaccion',
     timestamps: false
   });
 };
