@@ -193,8 +193,7 @@ async function iniciarPagoWebPay(req, res) {
         const productoInfo = prodResponse.data;
 
         // Verificar stock disponible
-        const stockResponse = await axios.get(`${INVENTORY_API}/inventario/producto/${item.ID_Producto}`, { timeout: 5000 });
-        const inventarioInfo = stockResponse.data;
+      const stockResponse = await axios.get(`${INVENTORY_API}/inventario/producto/${item.ID_Producto}/sucursal/1`, { timeout: 5000 });        const inventarioInfo = stockResponse.data;
 
         if (!inventarioInfo || inventarioInfo.Stock_Actual < item.Cantidad) {
           return res.status(400).json({
