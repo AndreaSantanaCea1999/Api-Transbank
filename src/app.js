@@ -4,13 +4,13 @@ const cors = require('cors');
 const morgan = require('morgan');
 require('dotenv').config();
 
-const db = require('./models'); // Importar configuración de base de datos y modelos
-const transbankRoutes = require('./routes/transbankRoutes'); // Importar rutas reales
+const db = require('./models'); // Importar modelos
+const transbankRoutes = require('./routes/transbankRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3003;
 
-// Middlewares de seguridad y configuración (ejemplo simplificado)
+// Middlewares de seguridad y configuración
 const helmet = require('helmet');
 const helmetConfig = helmet();
 
@@ -42,7 +42,7 @@ const requestLogger = (req, res, next) => next();
 const validateApiKey = (req, res, next) => {
   const apiKey = req.headers['x-api-key'];
   const validKeys = process.env.API_KEYS ? process.env.API_KEYS.split(',') : [];
-  if (!validKeys.includes(apiKey)) {
+  if (validKeys.length > 0 && !validKeys.includes(apiKey)) {
     return res.status(401).json({ error: 'Unauthorized: Invalid API Key' });
   }
   next();
@@ -62,7 +62,7 @@ app.use(requestTimeout(30000));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// Validaciones específicas sólo para rutas que esperan JSON
+// Validaciones específicas para rutas que esperan JSON
 app.use('/api/transbank', validateContentType);
 app.use(validatePayloadSize(1024 * 1024));
 app.use(detectSuspiciousPatterns);
@@ -70,48 +70,107 @@ app.use(sanitizeInput);
 app.use(requestLogger);
 
 // Validación opcional de API Key para rutas /api/transbank
-app.use(
-  '/api/transbank',
-  process.env.API_KEYS ? validateApiKey : (req, res, next) => next(),
-  transbankRoutes
-);
+if (process.env.API_KEYS) {
+  app.use('/api/transbank', validateApiKey);
+}
+
+// Montar rutas
+app.use('/api/transbank', transbankRoutes);
 
 // Ruta salud básica
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', uptime: process.uptime() });
+  res.json({ 
+    status: 'OK', 
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Ruta raíz
 app.get('/', (req, res) => {
-  res.json({ message: 'API de Transbank funcionando correctamente' });
+  res.json({ 
+    message: 'API de Transbank funcionando correctamente',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      transbank: '/api/transbank',
+      documentation: '/api/transbank'
+    }
+  });
 });
 
 // Middleware para rutas no encontradas
 app.use('*', (req, res) => {
-  res.status(404).json({ error: 'Ruta no encontrada' });
+  res.status(404).json({ 
+    success: false,
+    message: `Ruta ${req.originalUrl} no encontrada`,
+    availableEndpoints: '/api/transbank'
+  });
 });
 
 // Middleware global para manejo de errores
 app.use((err, req, res, next) => {
-  console.error('Error inesperado:', err);
-  res.status(500).json({ error: 'Error interno del servidor' });
+  console.error('❌ Error inesperado:', err);
+  res.status(500).json({ 
+    success: false,
+    error: 'Error interno del servidor',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
 });
 
-// Función para iniciar servidor y conectar a la base de datos
+// ✅ FUNCIÓN CORREGIDA: Usar sequelize.authenticate() en lugar de db.testConnection()
 async function startServer() {
   try {
-    await db.testConnection();  // Probar conexión a la base de datos
-    await db.sync();            // Sincronizar modelos con la base de datos
+    console.log('🔄 Iniciando servidor...');
+    
+    // ✅ CORRECCIÓN: Usar el método correcto de Sequelize
+    await db.sequelize.authenticate();
+    console.log('✅ Conexión a MySQL establecida correctamente');
+    
+    // ✅ DESACTIVADO: No sincronizar tablas automáticamente (usar tablas existentes)
+    console.log('📦 Usando tablas existentes (sin sincronización automática)');
+    console.log('💡 Solo se usará la tabla "transacciones" existente');
 
     app.listen(PORT, () => {
-      console.log(`Servidor corriendo en http://localhost:${PORT}`);
-      console.log(`API de Transbank disponible en http://localhost:${PORT}/api/transbank`);
+      console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+      console.log(`💳 API de Transbank disponible en http://localhost:${PORT}/api/transbank`);
     });
+    
   } catch (error) {
     console.error('❌ No se pudo iniciar el servidor:', error);
+    console.error('Detalles del error:', {
+      name: error.name,
+      message: error.message,
+      code: error.code
+    });
     process.exit(1);
   }
 }
+
+// Manejar señales de terminación
+process.on('SIGTERM', async () => {
+  console.log('📤 Recibida señal SIGTERM, cerrando servidor...');
+  try {
+    await db.sequelize.close();
+    console.log('✅ Conexión a base de datos cerrada');
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Error cerrando conexión:', error);
+    process.exit(1);
+  }
+});
+
+process.on('SIGINT', async () => {
+  console.log('📤 Recibida señal SIGINT, cerrando servidor...');
+  try {
+    await db.sequelize.close();
+    console.log('✅ Conexión a base de datos cerrada');
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Error cerrando conexión:', error);
+    process.exit(1);
+  }
+});
 
 startServer();
 

@@ -18,7 +18,7 @@ const sequelize = new Sequelize(
     port: process.env.DB_PORT,
     dialect: 'mysql',
     logging: false,
-    timezone: '-03:00', // Zona horaria Chile
+    timezone: '-03:00', // Chile timezone
     define: {
       charset: 'utf8mb4',
       collate: 'utf8mb4_general_ci',
@@ -73,10 +73,16 @@ fs
     }
   });
 
-// Configurar asociaciones si existen
+// Configurar asociaciones si existen (PERO SALTANDO LAS PROBLEMÁTICAS)
 Object.keys(db).forEach(modelName => {
   if (db[modelName].associate) {
     try {
+      // ⚠️ SALTAR SOLO PARA MODELOS PROBLEMÁTICOS
+      if (['Cuotas', 'DetalleTransaccion', 'WebpayTransaccion'].includes(modelName)) {
+        console.log(`⚠️ Saltando asociaciones para ${modelName} (para evitar conflictos)`);
+        return;
+      }
+      
       db[modelName].associate(db);
       console.log(`🔗 Asociaciones configuradas para ${modelName}`);
     } catch (error) {
@@ -85,11 +91,13 @@ Object.keys(db).forEach(modelName => {
   }
 });
 
-// Relación Transaccion <-> EstadoTransaccion con alias 'estadoRelacion'
+// ⚠️ COMENTADO: Relación Transaccion <-> EstadoTransaccion (CAUSA EL ERROR)
+/*
+// Relación Transaccion <-> EstadoTransaccion
 if (db.Transaccion && db.EstadoTransaccion) {
   db.Transaccion.belongsTo(db.EstadoTransaccion, {
-    foreignKey: 'estadoId',    // Debe existir esta columna en Transaccion
-    as: 'estadoRelacion'       // Alias personalizado para la relación
+    foreignKey: 'estadoId',    // ← ESTE 'estadoId' NO EXISTE EN TU TABLA
+    as: 'estado'
   });
   db.EstadoTransaccion.hasMany(db.Transaccion, {
     foreignKey: 'estadoId',
@@ -97,12 +105,13 @@ if (db.Transaccion && db.EstadoTransaccion) {
   });
   console.log('🔗 Relación Transaccion <-> EstadoTransaccion configurada');
 }
+*/
 
-// Relación TransbankLog <-> Transaccion
+// ✅ MANTENER: Relación TransbankLog <-> Transaccion (ESTA FUNCIONA)
 if (db.TransbankLog && db.Transaccion) {
   db.TransbankLog.belongsTo(db.Transaccion, {
     foreignKey: 'ID_Transaccion',
-    as: 'transaccion'
+   // as: 'transaccion'
   });
   db.Transaccion.hasMany(db.TransbankLog, {
     foreignKey: 'ID_Transaccion',
@@ -114,16 +123,19 @@ if (db.TransbankLog && db.Transaccion) {
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
-// Función para sincronizar base de datos
+// 🔄 Sincronizar base de datos
 db.sync = async (options = {}) => {
   try {
     console.log('🔄 Sincronizando base de datos...');
     await sequelize.sync(options);
     console.log('✅ Base de datos sincronizada correctamente');
 
+    // ⚠️ COMENTADO: No crear estados por defecto (evita conflictos)
+    /*
     if (db.EstadoTransaccion) {
       await crearEstadosPorDefecto();
     }
+    */
 
     return true;
   } catch (error) {
@@ -132,7 +144,9 @@ db.sync = async (options = {}) => {
   }
 };
 
-// Crear estados de transacción por defecto
+// ⚠️ COMENTADO: Función que crea estados por defecto (EVITA CONFLICTOS)
+/*
+// ✅ Crear estados de transacción por defecto (corregido)
 async function crearEstadosPorDefecto() {
   try {
     const estadosDefecto = [
@@ -169,43 +183,24 @@ async function crearEstadosPorDefecto() {
         nombreEstado: 'Reembolsado',
         descripcion: 'Transacción reembolsada exitosamente',
         esFinal: true,
-        esExitoso: true
+        esExitoso: false
       }
     ];
 
-    for (const estado of estadosDefecto) {
+    for (const estadoData of estadosDefecto) {
       await db.EstadoTransaccion.findOrCreate({
-        where: { codigoEstado: estado.codigoEstado },
-        defaults: estado
+        where: { codigoEstado: estadoData.codigoEstado },
+        defaults: estadoData
       });
     }
 
-    console.log('✅ Estados de transacción por defecto verificados/creados');
+    console.log('✅ Estados de transacción por defecto verificados');
   } catch (error) {
-    console.error('❌ Error creando estados por defecto:', error.message);
+    console.error('❌ Error creando estados por defecto:', error);
   }
 }
+*/
 
-// Test de conexión a la base de datos
-db.testConnection = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('✅ Conexión a MySQL establecida correctamente');
-    return true;
-  } catch (error) {
-    console.error('❌ No se pudo conectar a MySQL:', error);
-    return false;
-  }
-};
-
-// Cerrar conexión
-db.close = async () => {
-  try {
-    await sequelize.close();
-    console.log('✅ Conexión a MySQL cerrada correctamente');
-  } catch (error) {
-    console.error('❌ Error cerrando conexión a MySQL:', error);
-  }
-};
+console.log('📝 Usando Transacciones con campo estadoTexto (sin FK a EstadoTransaccion)');
 
 module.exports = db;

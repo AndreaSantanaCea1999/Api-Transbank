@@ -5,36 +5,36 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
-      field: 'id'
+      field: 'id'  // ✅ CORREGIDO: Coincide con tu tabla real
     },
     clienteId: {
       type: DataTypes.INTEGER,
-      allowNull: true,
-      field: 'ID_Cliente'
+      allowNull: true,  // ✅ Permite NULL como tu tabla
+      field: 'ID_Cliente'  // ✅ Coincide con tu tabla real
     },
     ordenCompra: {
-      type: DataTypes.STRING(100),
+      type: DataTypes.STRING(100),  // ✅ VARCHAR(100) como tu tabla
       allowNull: true,
-      field: 'ordenCompra'
+      field: 'ordenCompra'  // ✅ Coincide con tu tabla real
     },
     monto: {
-      type: DataTypes.DECIMAL(10,2),
+      type: DataTypes.DECIMAL(10,2),  // ✅ DECIMAL(10,2) como tu tabla
       allowNull: true,
-      field: 'monto'
+      field: 'monto'  // ✅ Coincide con tu tabla real
     },
     token: {
-      type: DataTypes.STRING(255),
+      type: DataTypes.STRING(255),  // ✅ Nueva columna que tienes
       allowNull: true,
       field: 'token'
     },
-    estadoTexto: {  // ⚠️ CAMBIADO: de 'estado' a 'estadoTexto' para evitar conflicto
+    estadoTexto: {  // ✅ RENOMBRADO: para evitar conflicto con asociaciones
       type: DataTypes.STRING(50),
       allowNull: true,
       defaultValue: 'PENDIENTE',
-      field: 'estado'  // El campo en la BD sigue siendo 'estado'
+      field: 'estado'  // ✅ Mapea al campo 'estado' VARCHAR(50) de tu tabla
     },
     detalles: {
-      type: DataTypes.TEXT('long'),
+      type: DataTypes.TEXT('long'),  // ✅ LONGTEXT como tu tabla
       allowNull: true,
       field: 'detalles',
       get() {
@@ -53,17 +53,17 @@ module.exports = (sequelize, DataTypes) => {
     createdAt: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
-      field: 'createdAt'
+      field: 'createdAt'  // ✅ Coincide con tu tabla real
     },
     updatedAt: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
-      field: 'updatedAt'
+      field: 'updatedAt'  // ✅ Coincide con tu tabla real
     }
   }, {
-    tableName: 'transacciones',  // Usando la tabla 'transacciones' que tienes
+    tableName: 'transacciones',  // ✅ CORREGIDO: Tu tabla real es 'transacciones'
     timestamps: true,
-    createdAt: 'createdAt',
-    updatedAt: 'updatedAt'
+    createdAt: 'createdAt',    // ✅ Coincide con tu tabla
+    updatedAt: 'updatedAt'     // ✅ Coincide con tu tabla
   });
 };

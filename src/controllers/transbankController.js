@@ -120,13 +120,13 @@ async function crearTransaccion(req, res) {
 
     // Crear la transacción
     const transaccion = await Transaccion.create({
-      clienteId,
-      ordenCompra,
-      monto: parseFloat(monto),
-      token: `TOKEN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      estadoTexto: estado.toUpperCase(),
-      detalles: detalles || null
-    });
+  clienteId,
+  ordenCompra,
+  monto: parseFloat(monto),
+  token: `TOKEN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  estadoTexto: estado.toUpperCase(),  // ✅ Debe ser estadoTexto, NO estadoId
+  detalles: detalles || null
+});
 
     await logearAccion(req, 'CREAR_TRANSACCION', 'Transacción creada manualmente', req.body, transaccion, '201', null, transaccion.id, Date.now() - start);
 
