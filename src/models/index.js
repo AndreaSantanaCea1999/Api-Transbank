@@ -18,7 +18,7 @@ const sequelize = new Sequelize(
     port: process.env.DB_PORT,
     dialect: 'mysql',
     logging: false,
-    timezone: '-03:00', // Chile timezone
+    timezone: '-03:00', // Zona horaria Chile
     define: {
       charset: 'utf8mb4',
       collate: 'utf8mb4_general_ci',
@@ -85,11 +85,11 @@ Object.keys(db).forEach(modelName => {
   }
 });
 
-// Relación Transaccion <-> EstadoTransaccion
+// Relación Transaccion <-> EstadoTransaccion con alias 'estadoRelacion'
 if (db.Transaccion && db.EstadoTransaccion) {
   db.Transaccion.belongsTo(db.EstadoTransaccion, {
-    foreignKey: 'estadoId',
-    as: 'estado'
+    foreignKey: 'estadoId',    // Debe existir esta columna en Transaccion
+    as: 'estadoRelacion'       // Alias personalizado para la relación
   });
   db.EstadoTransaccion.hasMany(db.Transaccion, {
     foreignKey: 'estadoId',
@@ -114,7 +114,7 @@ if (db.TransbankLog && db.Transaccion) {
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
-// 🔄 Sincronizar base de datos
+// Función para sincronizar base de datos
 db.sync = async (options = {}) => {
   try {
     console.log('🔄 Sincronizando base de datos...');
@@ -132,7 +132,7 @@ db.sync = async (options = {}) => {
   }
 };
 
-// ✅ Crear estados de transacción por defecto (corregido)
+// Crear estados de transacción por defecto
 async function crearEstadosPorDefecto() {
   try {
     const estadosDefecto = [
@@ -186,7 +186,7 @@ async function crearEstadosPorDefecto() {
   }
 }
 
-// Conexión
+// Test de conexión a la base de datos
 db.testConnection = async () => {
   try {
     await sequelize.authenticate();

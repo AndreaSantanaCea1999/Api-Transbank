@@ -5,52 +5,65 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
-      field: 'ID_Transaccion'
+      field: 'id'
     },
     clienteId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       field: 'ID_Cliente'
     },
     ordenCompra: {
-      type: DataTypes.STRING(50),
-      allowNull: false,
-      field: 'Orden_Compra'
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      field: 'ordenCompra'
     },
     monto: {
-      type: DataTypes.DECIMAL(12,2),
-      allowNull: false,
-      field: 'Monto'
+      type: DataTypes.DECIMAL(10,2),
+      allowNull: true,
+      field: 'monto'
     },
-    divisa: {
-      type: DataTypes.STRING(10),
-      allowNull: false,
-      field: 'Divisa'
+    token: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      field: 'token'
     },
-    estadoId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      field: 'Estado_Id'  // debe ser igual a la FK en la tabla transbank_transacciones
+    estadoTexto: {  // ⚠️ CAMBIADO: de 'estado' a 'estadoTexto' para evitar conflicto
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      defaultValue: 'PENDIENTE',
+      field: 'estado'  // El campo en la BD sigue siendo 'estado'
     },
     detalles: {
-      type: DataTypes.JSON,
+      type: DataTypes.TEXT('long'),
       allowNull: true,
-      field: 'Detalles'
+      field: 'detalles',
+      get() {
+        const rawValue = this.getDataValue('detalles');
+        if (!rawValue) return null;
+        try {
+          return typeof rawValue === 'string' ? JSON.parse(rawValue) : rawValue;
+        } catch {
+          return rawValue;
+        }
+      },
+      set(value) {
+        this.setDataValue('detalles', typeof value === 'object' ? JSON.stringify(value) : value);
+      }
     },
     createdAt: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
-      field: 'Fecha_Creacion'
+      field: 'createdAt'
     },
     updatedAt: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
-      field: 'Fecha_Actualizacion'
+      field: 'updatedAt'
     }
   }, {
-    tableName: 'transbank_transacciones',
+    tableName: 'transacciones',  // Usando la tabla 'transacciones' que tienes
     timestamps: true,
-    createdAt: 'Fecha_Creacion',
-    updatedAt: 'Fecha_Actualizacion'
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
   });
 };
