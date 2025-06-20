@@ -90,6 +90,76 @@ async function listarTransacciones(req, res) {
 }
 
 // ============================================
+// OBTENER TRANSACCIÓN POR ID
+// ============================================
+async function obtenerTransaccionPorId(req, res) {
+  const start = Date.now();
+  try {
+    const { id } = req.params;
+
+    if (!id || isNaN(id)) {
+      await logearAccion(req, 'OBTENER_TRANSACCION_ID', 'ID inválido', req.params, null, '400', 'ID de transacción inválido', null, Date.now() - start);
+      return res.status(400).json({ 
+        success: false, 
+        message: 'ID de transacción inválido' 
+      });
+    }
+
+    console.log(`ℹ️ [obtenerTransaccionPorId] Consultando transacción ID: ${id}`);
+    
+    const transaccion = await Transaccion.findByPk(id, {
+      attributes: [
+        'id', 
+        'clienteId', 
+        'ordenCompra', 
+        'monto', 
+        'token', 
+        'estadoTexto',
+        'detalles', 
+        'createdAt', 
+        'updatedAt'
+      ]
+    });
+
+    if (!transaccion) {
+      await logearAccion(req, 'OBTENER_TRANSACCION_ID', 'Transacción no encontrada', req.params, null, '404', 'Transacción no encontrada', id, Date.now() - start);
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Transacción no encontrada' 
+      });
+    }
+
+    const respuesta = {
+      id: transaccion.id,
+      cliente_id: transaccion.clienteId,
+      orden_compra: transaccion.ordenCompra,
+      monto: parseFloat(transaccion.monto),
+      estado: transaccion.estadoTexto,
+      token: transaccion.token,
+      detalles: transaccion.detalles,
+      fecha_creacion: transaccion.createdAt,
+      fecha_actualizacion: transaccion.updatedAt
+    };
+
+    await logearAccion(req, 'OBTENER_TRANSACCION_ID', 'Transacción obtenida exitosamente', req.params, respuesta, '200', null, transaccion.id, Date.now() - start);
+    
+    return res.json({
+      success: true,
+      transaccion: respuesta
+    });
+    
+  } catch (error) {
+    console.error('❌ Error obteniendo transacción por ID:', error.message);
+    await logearAccion(req, 'OBTENER_TRANSACCION_ID', 'Error obteniendo transacción', req.params, null, '500', error.message, req.params.id, Date.now() - start);
+    return res.status(500).json({ 
+      success: false,
+      error: 'Error al obtener la transacción',
+      message: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+}
+
+// ============================================
 // CREAR TRANSACCIÓN MANUAL
 // ============================================
 async function crearTransaccion(req, res) {
@@ -911,6 +981,7 @@ async function healthCheck(req, res) {
 // EXPORTAR TODAS LAS FUNCIONES
 // ============================================
 module.exports = {
+  obtenerTransaccionPorId, // Añadir la nueva función aquí
   listarTransacciones,
   crearTransaccion,
   iniciarPagoWebPay,

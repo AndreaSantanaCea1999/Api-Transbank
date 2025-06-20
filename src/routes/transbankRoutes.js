@@ -9,6 +9,7 @@ router.get('/health', transbankController.healthCheck);
 // Gestión de transacciones
 router.get('/transacciones', transbankController.listarTransacciones);
 router.post('/transacciones', transbankController.crearTransaccion);
+router.get('/transacciones/:id', transbankController.obtenerTransaccionPorId);
 
 // Iniciar proceso de pago
 router.post('/webpay/iniciar', transbankController.iniciarPagoWebPay);
@@ -41,7 +42,8 @@ router.get('/', (req, res) => {
       health: 'GET /health - Verificar estado del sistema',
       transacciones: {
         listar: 'GET /transacciones - Lista todas las transacciones',
-        crear: 'POST /transacciones - Crear transacción manual'
+        crear: 'POST /transacciones - Crear transacción manual',
+        obtenerPorId: 'GET /transacciones/:id - Obtener una transacción por su ID'
       },
       webpay: {
         iniciar: 'POST /webpay/iniciar - Iniciar proceso de pago',
