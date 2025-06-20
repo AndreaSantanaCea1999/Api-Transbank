@@ -1,6 +1,8 @@
 const webpayRoutes = require('./webpayRoutes');
+const transbankRoutes = require('./transbankRoutes'); // Importar transbankRoutes
 
 router.use('/webpay', webpayRoutes);
+router.use('/transbank', transbankRoutes); // Montar transbankRoutes bajo /transbank
 
 router.get('/', (req, res) => {
   res.json({
@@ -15,8 +17,9 @@ router.get('/', (req, res) => {
       divisas: '/api/divisas',
       usuarios: '/api/usuarios',
       pedidos: '/api/pedidos',
-      sucursales: '/api/sucursales',
-      webpay: '/api/webpay' // NUEVO
+      sucursales: '/api/sucursales', // Asumiendo que tienes más rutas
+      webpay: '/api/webpay',
+      transbank: '/api/transbank' // Indicar la base para las rutas de Transbank
     }
   });
 });

@@ -21,7 +21,7 @@ router.get('/webpay/pagar', transbankController.paginaPagoWebPay);
 router.get('/webpay/retorno', transbankController.retornoWebPay);
 
 // Confirmar transacción (API endpoint)
-router.post('/confirmar', transbankController.confirmar);
+router.patch('/confirmar', transbankController.confirmar); // Cambiado a PATCH para ser más semántico
 
 // Pedidos listos para despachar
 router.get('/pedidos/por-despachar', transbankController.obtenerPedidosPorDespachar);
@@ -51,7 +51,7 @@ router.get('/', (req, res) => {
         retorno: 'GET /webpay/retorno?token=xxx&status=xxx - Retorno post-pago'
       },
       api: {
-        confirmar: 'POST /confirmar - Confirmar transacción programáticamente'
+        confirmar: 'PATCH /confirmar - Confirmar transacción programáticamente'
       },
       consultas: {
         pedidos: 'GET /pedidos/por-despachar - Pedidos pendientes de envío',
@@ -73,7 +73,7 @@ router.get('/', (req, res) => {
         }
       },
       confirmar_pago: {
-        url: 'POST /confirmar',
+        url: 'PATCH /confirmar',
         body: {
           token: 'TOKEN_WEBPAY',
           estado: 'EXITO'

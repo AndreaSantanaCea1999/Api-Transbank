@@ -73,6 +73,7 @@ async function listarTransacciones(req, res) {
     }));
     
     return res.json({
+      message: 'Listado de transacciones obtenido exitosamente.', // Mensaje de éxito agregado
       success: true,
       total: respuesta.length,
       filtros: { cliente_id, estado, orden, limite },
@@ -170,19 +171,20 @@ async function crearTransaccion(req, res) {
     
     const { clienteId, ordenCompra, monto, divisa = 'CLP', estado = 'PENDIENTE', detalles } = req.body;
 
-    // Validación básica
-    if (!clienteId || !ordenCompra || !monto) {
-      await logearAccion(req, 'CREAR_TRANSACCION', 'Datos incompletos', req.body, null, '400', 'Faltan campos requeridos', null, Date.now() - start);
+    // Validación robusta de entrada
+    const parsedMonto = parseFloat(monto);
+    if (!clienteId || !ordenCompra || isNaN(parsedMonto)) {
+      await logearAccion(req, 'CREAR_TRANSACCION', 'Datos incompletos o inválidos', req.body, null, '400', 'Faltan campos requeridos o el monto no es numérico', null, Date.now() - start);
       return res.status(400).json({ 
         success: false, 
-        message: 'clienteId, ordenCompra y monto son requeridos' 
+        message: 'Los campos clienteId, ordenCompra y un monto numérico son requeridos.' 
       });
     }
 
     // Verificar que la orden no exista
     const existeOrden = await Transaccion.findOne({ where: { ordenCompra } });
     if (existeOrden) {
-      return res.status(400).json({
+      return res.status(409).json({ // 409 Conflict es más apropiado para recursos duplicados
         success: false,
         message: `La orden ${ordenCompra} ya existe`
       });
@@ -192,7 +194,7 @@ async function crearTransaccion(req, res) {
     const transaccion = await Transaccion.create({
   clienteId,
   ordenCompra,
-  monto: parseFloat(monto),
+  monto: parsedMonto,
   token: `TOKEN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
   estadoTexto: estado.toUpperCase(),  // ✅ Debe ser estadoTexto, NO estadoId
   detalles: detalles || null
