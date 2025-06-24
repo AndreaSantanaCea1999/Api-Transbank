@@ -1,6 +1,6 @@
 {
   "name": "api-transbank-ferremas",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "API Orquestador de Transacciones para FERREMAS - Integra Inventario y Banco",
   "main": "src/app.js",
   "scripts": {
@@ -36,6 +36,7 @@
     "morgan": "^1.10.0",
     "mysql2": "^3.9.2",
     "sequelize": "^6.37.1",
+    "uuid": "^11.1.0",
     "winston": "^3.11.0"
   },
   "devDependencies": {

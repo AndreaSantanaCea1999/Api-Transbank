@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Webpay FERREMAS</title>
+</head>
+<body>
+    <h1>🏪 FERREMAS - Test Webpay</h1>
+    
+    <button onclick="crearTransaccion()">Crear Transacción y Pagar</button>
+    
+    <div id="resultado"></div>
+
+    <script>
+        async function crearTransaccion() {
+            try {
+                // 1. Crear transacción
+                const response = await fetch('http://localhost:3003/api/webpay/transactions', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({amount: 15000})
+                });
+                
+                const data = await response.json();
+                document.getElementById('resultado').innerHTML = 
+                    `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                
+                if (data.success) {
+                    // 2. Redirigir a Webpay automáticamente
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = data.data.url;
+                    
+                    const tokenInput = document.createElement('input');
+                    tokenInput.type = 'hidden';
+                    tokenInput.name = 'token_ws';
+                    tokenInput.value = data.data.token;
+                    
+                    form.appendChild(tokenInput);
+                    document.body.appendChild(form);
+                    
+                    // Redirigir a Webpay
+                    form.submit();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

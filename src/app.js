@@ -5,7 +5,7 @@ const morgan = require('morgan');
 require('dotenv').config();
 
 const db = require('./models'); // Importar modelos
-const transbankRoutes = require('./routes/transbankRoutes');
+const apiRoutes = require('./routes/index');
 
 const app = express();
 const PORT = process.env.PORT || 3003;
@@ -75,7 +75,7 @@ if (process.env.API_KEYS) {
 }
 
 // Montar rutas
-app.use('/api/transbank', transbankRoutes);
+app.use('/api', apiRoutes);
 
 // Ruta salud básica
 app.get('/health', (req, res) => {
@@ -88,26 +88,29 @@ app.get('/health', (req, res) => {
 
 // Ruta raíz
 app.get('/', (req, res) => {
-  res.json({ 
-    message: 'API de Transbank funcionando correctamente',
-    version: '1.0.0',
+  res.json({
+    message: 'API de Transbank y Webpay - FERREMAS',
+    version: '2.0.0',
     endpoints: {
       health: '/health',
+      api_info: '/api',
       transbank: '/api/transbank',
+      webpay: '/api/webpay',
+      'webpay-health': '/api/webpay/health',
+      'webpay-create': 'POST /api/webpay/transactions',
+      'webpay-confirm': 'PUT /api/webpay/transactions/:token',
       documentation: '/api/transbank'
     }
   });
 });
-
 // Middleware para rutas no encontradas
 app.use('*', (req, res) => {
-  res.status(404).json({ 
+  res.status(404).json({
     success: false,
     message: `Ruta ${req.originalUrl} no encontrada`,
-    availableEndpoints: '/api/transbank'
+    availableEndpoints: ['/api/transbank', '/api/webpay', '/api']
   });
 });
-
 // Middleware global para manejo de errores
 app.use((err, req, res, next) => {
   console.error('❌ Error inesperado:', err);
