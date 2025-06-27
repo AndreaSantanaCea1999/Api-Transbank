@@ -6,8 +6,7 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "test": "node test/test-transbank.js",
-    "db:setup": "node scripts/setup-database.js"
+    "test": "node test/test-transbank.js"
   },
   "keywords": [
     "transbank",
@@ -19,7 +18,7 @@
     "mysql",
     "banco"
   ],
-  "author": "Tu Nombre",
+  "author": "FERREMAS",
   "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
