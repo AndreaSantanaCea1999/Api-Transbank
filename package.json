@@ -1,59 +1,37 @@
 {
-  "name": "api-transbank-ferremas",
-  "version": "2.0.0",
-  "description": "API Orquestador de Transacciones para FERREMAS - Integra Inventario y Banco",
-  "main": "src/app.js",
+  "name": "transbank-integration",
+  "version": "1.0.0",
+  "description": "Integración directa con API REST de Transbank Webpay Plus sin SDK - Conectado con API Banco",
+  "main": "app.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
-    "test": "echo \"No tests specified\" && exit 0",
-    "test:coverage": "echo \"No coverage tests specified\" && exit 0",
-    "db:sync": "node scripts/syncDatabase.js",
-    "db:seed": "node scripts/seedDatabase.js",
-    "health": "curl http://localhost:3003/api/transbank/health",
-    "logs": "tail -f logs/api-transbank.log"
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "test": "node test/test-transbank.js",
+    "db:setup": "node scripts/setup-database.js"
   },
   "keywords": [
     "transbank",
-    "ferremas",
-    "api",
-    "orquestador",
-    "nodejs",
+    "webpay",
+    "pagos",
+    "chile",
     "express",
+    "nodejs",
     "mysql",
-    "sequelize"
+    "banco"
   ],
-  "author": "FERREMAS Dev Team",
-  "license": "ISC",
+  "author": "Tu Nombre",
+  "license": "MIT",
   "dependencies": {
-    "axios": "^1.10.0",
+    "express": "^4.18.2",
+    "axios": "^1.6.2",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "express": "^4.21.2",
-    "express-rate-limit": "^7.5.0",
-    "helmet": "^7.2.0",
-    "joi": "^17.11.0",
-    "morgan": "^1.10.0",
-    "mysql2": "^3.9.2",
-    "sequelize": "^6.37.1",
-    "uuid": "^11.1.0",
-    "winston": "^3.11.0"
+    "mysql2": "^3.6.5"
   },
   "devDependencies": {
-    "jest": "^29.7.0",
-    "nodemon": "^3.1.0",
-    "supertest": "^6.3.3"
+    "nodemon": "^3.0.2"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/AndreaSantanaCea1999/api-transbank-ferremas.git"
-  },
-  "bugs": {
-    "url": "https://github.com/AndreaSantanaCea1999/api-transbank-ferremas/issues"
-  },
-  "homepage": "https://github.com/AndreaSantanaCea1999/api-transbank-ferremas#readme"
+    "node": ">=16.0.0"
+  }
 }

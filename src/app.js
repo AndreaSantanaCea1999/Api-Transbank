@@ -1,179 +1,163 @@
-// src/app.js
+// app.js - Aplicación principal de Express
 const express = require('express');
 const cors = require('cors');
-const morgan = require('morgan');
+const path = require('path');
 require('dotenv').config();
-
-const db = require('./models'); // Importar modelos
-const apiRoutes = require('./routes/index');
 
 const app = express();
 const PORT = process.env.PORT || 3003;
 
-// Middlewares de seguridad y configuración
-const helmet = require('helmet');
-const helmetConfig = helmet();
+// Configuración CORS para permitir conexiones desde el frontend
+const corsOptions = {
+    origin: [
+        process.env.FRONTEND_URL || 'http://localhost:3004',
+        'http://localhost:3004', // Fallback para desarrollo
+        process.env.BANK_API_URL || 'http://localhost:3001'
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Source']
+};
 
-const customCors = cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+// Middlewares
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Middleware de logging
+app.use((req, res, next) => {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] ${req.method} ${req.path} - ${req.ip}`);
+    next();
 });
 
-const rateLimiters = {
-  general: (req, res, next) => next(),
-  createTransaction: (req, res, next) => next(),
-  confirmTransaction: (req, res, next) => next(),
-  critical: (req, res, next) => next(),
-};
+// Archivos estáticos (si tienes frontend)
+app.use(express.static('public'));
 
-const validateContentType = (req, res, next) => {
-  if (['POST', 'PUT', 'PATCH'].includes(req.method) && !req.is('application/json')) {
-    return res.status(415).json({ error: 'Content-Type must be application/json' });
-  }
-  next();
-};
+// Importar rutas
+const transbankRoutes = require('./routes/transbank');
 
-const validatePayloadSize = (maxSize) => (req, res, next) => next();
-const detectSuspiciousPatterns = (req, res, next) => next();
-const sanitizeInput = (req, res, next) => next();
-const requestLogger = (req, res, next) => next();
+// Usar rutas de Transbank
+app.use('/api/transbank', transbankRoutes);
 
-const validateApiKey = (req, res, next) => {
-  const apiKey = req.headers['x-api-key'];
-  const validKeys = process.env.API_KEYS ? process.env.API_KEYS.split(',') : [];
-  if (validKeys.length > 0 && !validKeys.includes(apiKey)) {
-    return res.status(401).json({ error: 'Unauthorized: Invalid API Key' });
-  }
-  next();
-};
-
-const requestTimeout = (ms) => (req, res, next) => {
-  req.setTimeout(ms, () => res.status(503).json({ error: 'Request timeout' }));
-  next();
-};
-
-// Configuraciones de middlewares generales
-app.use(morgan('dev'));
-app.use(helmetConfig);
-app.use(customCors);
-app.use(rateLimiters.general);
-app.use(requestTimeout(30000));
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
-
-// Validaciones específicas para rutas que esperan JSON
-app.use('/api/transbank', validateContentType);
-app.use(validatePayloadSize(1024 * 1024));
-app.use(detectSuspiciousPatterns);
-app.use(sanitizeInput);
-app.use(requestLogger);
-
-// Validación opcional de API Key para rutas /api/transbank
-if (process.env.API_KEYS) {
-  app.use('/api/transbank', validateApiKey);
-}
-
-// Montar rutas
-app.use('/api', apiRoutes);
-
-// Ruta salud básica
+// Ruta de health check
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString()
-  });
+    res.json({
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development',
+        version: '1.0.0'
+    });
 });
 
-// Ruta raíz
+// Ruta principal con información de la API
 app.get('/', (req, res) => {
-  res.json({
-    message: 'API de Transbank y Webpay - FERREMAS',
-    version: '2.0.0',
-    endpoints: {
-      health: '/health',
-      api_info: '/api',
-      transbank: '/api/transbank',
-      webpay: '/api/webpay',
-      'webpay-health': '/api/webpay/health',
-      'webpay-create': 'POST /api/webpay/transactions',
-      'webpay-confirm': 'PUT /api/webpay/transactions/:token',
-      documentation: '/api/transbank'
-    }
-  });
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    
+    res.json({
+        message: '🏦 API de Integración con Transbank + Banco',
+        version: '1.0.0',
+        environment: process.env.NODE_ENV || 'development',
+        endpoints: {
+            // Transbank endpoints
+            'POST /api/transbank/create': 'Crear nueva transacción',
+            'GET /api/transbank': 'Crear transacción simple (compatible con PHP)',
+            'GET /api/transbank/redirect/:token': 'Redirigir a formulario de pago',
+            'POST /api/transbank/result': 'Confirmar resultado del pago (webhook Transbank)',
+            'GET /api/transbank/status/:token': 'Obtener estado de transacción',
+            'POST /api/transbank/refund/:token': 'Realizar reembolso',
+            'GET /api/transbank/transaction/:token': 'Obtener información de transacción',
+            'POST /api/transbank/webhook/bank': 'Webhook para API del banco',
+            'GET /api/transbank/admin/transactions': 'Listar todas las transacciones (admin)',
+            
+            // Utility endpoints
+            'GET /health': 'Health check de la API'
+        },
+        externalAPIs: {
+            transbank: {
+                environment: process.env.NODE_ENV === 'production' ? 'production' : 'testing',
+                url: process.env.NODE_ENV === 'production' 
+                    ? 'https://webpay3g.transbank.cl'
+                    : 'https://webpay3gint.transbank.cl'
+            },
+            bank: {
+                url: process.env.BANK_API_URL || 'Not configured',
+                status: process.env.BANK_API_URL ? 'configured' : 'not configured'
+            },
+            frontend: {
+                url: process.env.FRONTEND_URL || 'http://localhost:3004'
+            }
+        },
+        database: {
+            host: process.env.DB_HOST || 'Not configured',
+            name: process.env.DB_NAME || 'Not configured',
+            status: (process.env.DB_HOST && process.env.DB_NAME) ? 'configured' : 'not configured'
+        }
+    });
 });
+
 // Middleware para rutas no encontradas
 app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Ruta ${req.originalUrl} no encontrada`,
-    availableEndpoints: ['/api/transbank', '/api/webpay', '/api']
-  });
+    res.status(404).json({
+        success: false,
+        message: 'Ruta no encontrada',
+        path: req.originalUrl,
+        availableRoutes: [
+            'GET /',
+            'GET /health',
+            'POST /api/transbank/create',
+            'GET /api/transbank',
+            'GET /api/transbank/redirect/:token',
+            'POST /api/transbank/result',
+            'GET /api/transbank/status/:token',
+            'POST /api/transbank/refund/:token',
+            'GET /api/transbank/transaction/:token'
+        ]
+    });
 });
-// Middleware global para manejo de errores
+
+// Manejo global de errores
 app.use((err, req, res, next) => {
-  console.error('❌ Error inesperado:', err);
-  res.status(500).json({ 
-    success: false,
-    error: 'Error interno del servidor',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
-});
-
-
-async function startServer() {
-  try {
-    console.log('🔄 Iniciando servidor...');
+    console.error('❌ Error no manejado:', err.stack);
     
-    await db.sequelize.authenticate();
-    console.log('✅ Conexión a MySQL establecida correctamente');
-    
- 
-    console.log('📦 Usando tablas existentes (sin sincronización automática)');
-    console.log('💡 Solo se usará la tabla "transacciones" existente');
-
-    app.listen(PORT, () => {
-      console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-      console.log(`💳 API de Transbank disponible en http://localhost:${PORT}/api/transbank`);
+    res.status(500).json({
+        success: false,
+        message: 'Error interno del servidor',
+        error: process.env.NODE_ENV === 'development' ? {
+            message: err.message,
+            stack: err.stack
+        } : 'Error interno del servidor',
+        timestamp: new Date().toISOString()
     });
-    
-  } catch (error) {
-    console.error('❌ No se pudo iniciar el servidor:', error);
-    console.error('Detalles del error:', {
-      name: error.name,
-      message: error.message,
-      code: error.code
-    });
-    process.exit(1);
-  }
-}
-
-// Manejar señales de terminación
-process.on('SIGTERM', async () => {
-  console.log('📤 Recibida señal SIGTERM, cerrando servidor...');
-  try {
-    await db.sequelize.close();
-    console.log('✅ Conexión a base de datos cerrada');
-    process.exit(0);
-  } catch (error) {
-    console.error('❌ Error cerrando conexión:', error);
-    process.exit(1);
-  }
 });
 
-process.on('SIGINT', async () => {
-  console.log('📤 Recibida señal SIGINT, cerrando servidor...');
-  try {
-    await db.sequelize.close();
-    console.log('✅ Conexión a base de datos cerrada');
-    process.exit(0);
-  } catch (error) {
-    console.error('❌ Error cerrando conexión:', error);
-    process.exit(1);
-  }
+// Iniciar servidor
+app.listen(PORT, () => {
+    console.log('\n🚀 ================================');
+    console.log(`   Servidor Transbank iniciado`);
+    console.log('🚀 ================================');
+    console.log(`📡 Puerto: ${PORT}`);
+    console.log(`🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🏦 Transbank: ${process.env.NODE_ENV === 'production' ? 'PRODUCCIÓN' : 'TESTING'}`);
+    console.log(`💾 Base de datos: ${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`);
+    console.log(`🔗 API Banco: ${process.env.BANK_API_URL || 'No configurada'}`);
+    console.log(`🖥️  Frontend: ${process.env.FRONTEND_URL || 'http://localhost:3004'}`);
+    console.log('\n📋 Endpoints principales:');
+    console.log(`   http://localhost:${PORT}/`);
+    console.log(`   http://localhost:${PORT}/api/transbank`);
+    console.log(`   http://localhost:${PORT}/health`);
+    console.log('🚀 ================================\n');
 });
 
-startServer();
+// Manejo de cierre graceful
+process.on('SIGTERM', () => {
+    console.log('🛑 Cerrando servidor...');
+    process.exit(0);
+});
+
+process.on('SIGINT', () => {
+    console.log('\n🛑 Cerrando servidor...');
+    process.exit(0);
+});
 
 module.exports = app;
