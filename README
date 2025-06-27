@@ -1,0 +1,466 @@
+# 🏦 Integración Transbank + API Banco con Node.js + Express
+
+Implementación completa de Transbank Webpay Plus conectada con API del banco, usando conexión directa a la API REST sin SDK. Basada en el código PHP original y configurada para tu entorno específico.
+
+## 🌟 Características Principales
+
+- ✅ **Conexión directa** a API REST de Transbank (sin SDK)
+- ✅ **Integración con API del banco** en localhost:3001
+- ✅ **Base de datos MySQL** para persistencia
+- ✅ **Soporte completo** para sandbox y producción
+- ✅ **Flujo completo** de pagos (crear, confirmar, consultar, reembolsar)
+- ✅ **Webhooks** para comunicación con API del banco
+- ✅ **Redirección automática** al frontend configurado
+- ✅ **Logs detallados** y manejo de errores robusto
+- ✅ **Panel de administración** para consultar transacciones
+- ✅ **Compatible** con tu configuración existente
+
+## 🚀 Instalación y Configuración
+
+### 1. Instalar dependencias
+```bash
+git clone [tu-repositorio]
+cd transbank-integration
+npm install
+```
+
+### 2. Configurar variables de entorno
+```bash
+# Copia el archivo de ejemplo
+cp .env.example .env
+
+# Edita las variables según tu configuración
+nano .env
+```
+
+### 3. Configurar base de datos
+```bash
+# Ejecutar script SQL en tu base de datos MySQL
+mysql -u administrador -p ferremas_complete < scripts/setup-database.sql
+
+# O usar el script de Node.js
+npm run db:setup
+```
+
+### 4. Iniciar servidor
+```bash
+# Desarrollo
+npm run dev
+
+# Producción
+npm start
+```
+
+## 📁 Estructura del Proyecto
+
+```
+transbank-integration/
+├── app.js                      # Aplicación principal Express
+├── services/
+│   └── transbank.js           # Servicio para API de Transbank + Banco
+├── routes/
+│   └── transbank.js           # Rutas del flujo de pagos
+├── scripts/
+│   └── setup-database.sql     # Script para configurar BD
+├── test/
+│   └── test-transbank.js      # Ejemplos y tests
+├── .env.example               # Variables de entorno de ejemplo
+├── package.json
+└── README.md
+```
+
+## 🔧 API Endpoints
+
+### 🆕 Crear Transacción
+```http
+POST /api/transbank/create
+Content-Type: application/json
+
+{
+  "amount": 15000,
+  "buyOrder": "123456",     // opcional
+  "sessionId": "654321",    // opcional  
+  "userId": 1               // opcional
+}
+```
+
+**Respuesta:**
+```json
+{
+  "success": true,
+  "message": "Transacción creada exitosamente",
+  "data": {
+    "token": "01ab23cd4ef5...",
+    "url": "https://webpay3gint.transbank.cl/webpayserver/initTransaction",
+    "buyOrder": "123456",
+    "sessionId": "654321",
+    "amount": 15000,
+    "redirectUrl": "http://localhost:3003/api/transbank/redirect/01ab23cd4ef5..."
+  }
+}
+```
+
+### 📄 Crear Transacción Simple (Compatible con PHP)
+```http
+GET /api/transbank
+```
+Crea una transacción con valores por defecto (monto: $15.000).
+
+### 🔄 Redirigir a Pago
+```http
+GET /api/transbank/redirect/:token
+```
+Genera página HTML que redirige automáticamente a Transbank con interfaz mejorada.
+
+### ✅ Confirmar Resultado (Webhook Transbank)
+```http
+POST /api/transbank/result
+Content-Type: application/x-www-form-urlencoded
+
+token_ws={token}
+```
+Este endpoint es llamado por Transbank. Redirige automáticamente al frontend.
+
+### 📊 Consultar Estado
+```http
+GET /api/transbank/status/:token
+```
+
+### 💰 Realizar Reembolso
+```http
+POST /api/transbank/refund/:token
+Content-Type: application/json
+
+{
+  "amount": 15000
+}
+```
+
+### 📋 Obtener Información de Transacción
+```http
+GET /api/transbank/transaction/:token
+```
+
+### 🔗 Webhook del Banco
+```http
+POST /api/transbank/webhook/bank
+Content-Type: application/json
+
+{
+  "action": "validate-payment",
+  "token": "abc123",
+  "data": { "approved": true }
+}
+```
+
+### 👨‍💼 Admin: Listar Transacciones
+```http
+GET /api/transbank/admin/transactions?page=1&limit=20&status=authorized
+```
+
+## 🔄 Flujo Completo de Pago
+
+```mermaid
+sequenceDiagram
+    participant F as Frontend
+    participant A as API Node.js
+    participant B as API Banco
+    participant T as Transbank
+    participant D as Base de Datos
+
+    F->>A: POST /api/transbank/create
+    A->>B: Validar transacción
+    B-->>A: Aprobación
+    A->>T: Crear transacción
+    T-->>A: Token + URL
+    A->>D: Guardar transacción
+    A-->>F: Token + redirectUrl
+    
+    F->>A: GET /redirect/:token
+    A-->>F: Página de redirección
+    F->>T: Formulario de pago
+    
+    Note over T: Usuario realiza pago
+    
+    T->>A: POST /result (webhook)
+    A->>T: Confirmar transacción
+    T-->>A: Resultado final
+    A->>B: Notificar resultado
+    A->>D: Actualizar estado
+    A-->>F: Redirigir con resultado
+```
+
+## 🔗 Integración con API del Banco
+
+### Configuración
+El servicio se conecta automáticamente con tu API del banco en `localhost:3001`. Las siguientes acciones se notifican:
+
+- ✅ **transaction-created**: Nueva transacción creada
+- ✅ **transaction-confirmed**: Pago confirmado
+- ✅ **transaction-status-checked**: Estado consultado
+- ✅ **transaction-refunded**: Reembolso procesado
+
+### Endpoints esperados en API Banco
+```javascript
+// POST http://localhost:3001/transbank/transaction-created
+// POST http://localhost:3001/transbank/transaction-confirmed
+// POST http://localhost:3001/transbank/transaction-status-checked  
+// POST http://localhost:3001/transbank/transaction-refunded
+// POST http://localhost:3001/validate-transaction
+```
+
+## 💾 Base de Datos
+
+### Tabla Principal: `transbank_transactions`
+```sql
+- id, token, buy_order, session_id, amount
+- status (created, confirmed, authorized, failed, refunded)
+- transbank_url, response_code, authorization_code
+- card_detail (JSON), raw_response (JSON)
+- refund_amount, refund_date
+- bank_validation, bank_balance_updated
+- user_id, created_at, updated_at
+```
+
+### Tabla de Logs: `transbank_api_logs`
+```sql
+- transaction_token, api_type, action, method, url
+- request_data (JSON), response_data (JSON)
+- success, error_message, execution_time_ms
+```
+
+### Vista de Estadísticas: `transbank_stats`
+Estadísticas diarias de transacciones de los últimos 30 días.
+
+## 🌐 Integración con Frontend
+
+### Ejemplo con JavaScript/Fetch:
+```javascript
+// 1. Crear transacción
+async function iniciarPago(amount = 15000, userId = null) {
+    const response = await fetch('/api/transbank/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount, userId })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+        // 2. Redirigir al formulario de pago
+        window.location.href = data.data.redirectUrl;
+    }
+}
+
+// 3. Manejar resultado en página de retorno
+// URL: http://localhost:3004/payment-result?token=...&status=...&success=true
+const urlParams = new URLSearchParams(window.location.search);
+const paymentSuccess = urlParams.get('success') === 'true';
+const amount = urlParams.get('amount');
+const authCode = urlParams.get('authCode');
+```
+
+### Ejemplo con React:
+```jsx
+function PagoComponent() {
+    const [loading, setLoading] = useState(false);
+    
+    const handlePago = async (amount) => {
+        setLoading(true);
+        try {
+            const response = await fetch('/api/transbank/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    amount, 
+                    userId: currentUser.id 
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Redirigir al formulario de pago
+                window.location.href = data.data.redirectUrl;
+            } else {
+                alert('Error al crear transacción: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    return (
+        <button 
+            onClick={() => handlePago(25000)} 
+            disabled={loading}
+            className="btn-pagar"
+        >
+            {loading ? 'Procesando...' : 'Pagar $25.000'}
+        </button>
+    );
+}
+
+// Componente para manejar resultado del pago
+function PaymentResult() {
+    const [searchParams] = useSearchParams();
+    const success = searchParams.get('success') === 'true';
+    const amount = searchParams.get('amount');
+    const token = searchParams.get('token');
+    
+    return (
+        <div className={`payment-result ${success ? 'success' : 'error'}`}>
+            {success ? (
+                <div>
+                    <h2>✅ ¡Pago Exitoso!</h2>
+                    <p>Monto: ${parseInt(amount).toLocaleString('es-CL')}</p>
+                    <p>Token: {token}</p>
+                </div>
+            ) : (
+                <div>
+                    <h2>❌ Pago Fallido</h2>
+                    <p>Intenta nuevamente</p>
+                </div>
+            )}
+        </div>
+    );
+}
+```
+
+## ⚙️ Configuración para Producción
+
+### 1. Variables de entorno
+```bash
+NODE_ENV=production
+WEBPAY_API_KEY_ID=tu_api_key_id_real_produccion
+WEBPAY_API_KEY_SECRET=tu_api_key_secret_real_produccion
+FRONTEND_URL=https://tu-dominio.com
+BANK_API_URL=https://tu-api-banco-produccion.com
+DB_HOST=tu-servidor-mysql-produccion
+```
+
+### 2. HTTPS obligatorio
+```bash
+# Usar proxy reverso (nginx/apache) o certificado SSL
+# Transbank requiere HTTPS en producción
+```
+
+### 3. Optimizaciones de base de datos
+```sql
+-- Crear índices adicionales para mejor rendimiento
+CREATE INDEX idx_created_status ON transbank_transactions(created_at, status);
+CREATE INDEX idx_user_amount ON transbank_transactions(user_id, amount);
+
+-- Configurar limpieza automática de logs antiguos
+-- Ejecutar semanalmente:
+CALL CleanOldTransactions(90);
+```
+
+## 🧪 Testing y Desarrollo
+
+### Ejecutar tests
+```bash
+npm test
+```
+
+### Credenciales de testing (sandbox)
+- **Tarjeta:** `4051885600446623`
+- **Año:** Cualquier año futuro (ej: 2025)
+- **CVV:** `123`
+
+### Endpoints de desarrollo
+```bash
+# Health check
+curl http://localhost:3003/health
+
+# Crear transacción de prueba
+curl http://localhost:3003/api/transbank
+
+# Ver todas las transacciones
+curl http://localhost:3003/api/transbank/admin/transactions
+```
+
+## 🔒 Seguridad y Mejores Prácticas
+
+### ✅ Implementado
+- Variables de entorno para credenciales
+- Validación de datos de entrada
+- Logs de auditoría completos
+- Timeouts en peticiones HTTP
+- Manejo de errores robusto
+- CORS configurado correctamente
+
+### 🔄 Recomendaciones adicionales
+- Usar HTTPS en producción
+- Implementar rate limiting
+- Validar tokens con TTL
+- Encriptar datos sensibles en BD
+- Monitorear logs de transacciones
+- Configurar alertas para fallos
+
+## 📊 Estados de Transacción
+
+| Estado | Descripción |
+|--------|-------------|
+| `created` | Transacción creada, pendiente de pago |
+| `confirmed` | Pago confirmado por Transbank |
+| `authorized` | Pago autorizado exitosamente |
+| `failed` | Pago fallido o rechazado |
+| `refunded` | Transacción reembolsada |
+| `cancelled` | Transacción cancelada |
+
+## 🛠️ Comandos Útiles
+
+```bash
+# Desarrollo
+npm run dev              # Iniciar con nodemon
+npm start               # Iniciar en producción
+npm test                # Ejecutar tests
+npm run db:setup        # Configurar base de datos
+
+# Base de datos
+mysql -u administrador -p ferremas_complete < scripts/setup-database.sql
+
+# Logs en tiempo real
+tail -f logs/transbank.log
+
+# Verificar configuración
+curl http://localhost:3003/health
+```
+
+## 📞 Soporte y Debugging
+
+### Variables de debug
+```bash
+# Activar logs detallados
+TRANSBANK_DEBUG=true
+LOG_LEVEL=debug
+```
+
+### Logs importantes
+- Todas las peticiones a Transbank se registran en `transbank_api_logs`
+- Estados de transacciones se actualizan automáticamente
+- Errores se loggean con stack trace completo
+
+### Problemas comunes
+1. **Error de credenciales**: Verificar `WEBPAY_API_KEY_ID` y `WEBPAY_API_KEY_SECRET`
+2. **Timeout de BD**: Aumentar `connectionLimit` en pool MySQL
+3. **CORS errors**: Verificar `FRONTEND_URL` en configuración
+4. **API Banco no responde**: Verificar `BANK_API_URL` y logs
+
+---
+
+## 🎯 Próximos Pasos
+
+Una vez que tengas todo funcionando:
+
+1. **Personalizar montos** según tu aplicación
+2. **Integrar con sistema de usuarios** existente
+3. **Configurar notificaciones** por email/SMS
+4. **Implementar dashboard** de administración
+5. **Configurar monitoreo** de transacciones
+6. **Preparar para producción** con certificados SSL
+
+¡Tu integración de Transbank está lista para usar! 🚀
