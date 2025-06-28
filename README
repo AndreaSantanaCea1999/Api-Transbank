@@ -1,48 +1,105 @@
-# 🏦 Integración Transbank + API Banco con Node.js + Express
+# 🏦 FERREMAS - Integración Transbank Webpay Plus
 
-Implementación completa de Transbank Webpay Plus conectada con API del banco, usando conexión directa a la API REST sin SDK. Basada en el código PHP original y configurada para tu entorno específico.
+<div align="center">
 
-## 🌟 Características Principales
+![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)
+![Express](https://img.shields.io/badge/Express-4.21+-blue.svg)
+![MySQL](https://img.shields.io/badge/MySQL-8.0+-orange.svg)
+![Transbank](https://img.shields.io/badge/Transbank-Webpay%20Plus-red.svg)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-- ✅ **Conexión directa** a API REST de Transbank (sin SDK)
-- ✅ **Integración con API del banco** en localhost:3001
-- ✅ **Base de datos MySQL** para persistencia
-- ✅ **Soporte completo** para sandbox y producción
-- ✅ **Flujo completo** de pagos (crear, confirmar, consultar, reembolsar)
-- ✅ **Webhooks** para comunicación con API del banco
-- ✅ **Redirección automática** al frontend configurado
-- ✅ **Logs detallados** y manejo de errores robusto
-- ✅ **Panel de administración** para consultar transacciones
-- ✅ **Compatible** con tu configuración existente
+*Integración completa con Transbank Webpay Plus para el sistema FERREMAS*
 
-## 🚀 Instalación y Configuración
+[Instalación](#-instalación) • [Configuración](#-configuración) • [API Docs](#-documentación-de-api) • [Testing](#-testing) • [Producción](#-producción)
 
-### 1. Instalar dependencias
+</div>
+
+---
+
+## 📋 Tabla de Contenidos
+
+- [🚀 Características](#-características)
+- [⚙️ Instalación](#️-instalación)
+- [🔧 Configuración](#-configuración)
+- [📁 Estructura del Proyecto](#-estructura-del-proyecto)
+- [🌐 Documentación de API](#-documentación-de-api)
+- [🔄 Flujo de Transacciones](#-flujo-de-transacciones)
+- [💾 Base de Datos](#-base-de-datos)
+- [🧪 Testing](#-testing)
+- [🚀 Producción](#-producción)
+- [🛠️ Troubleshooting](#️-troubleshooting)
+- [📞 Soporte](#-soporte)
+
+---
+
+## 🚀 Características
+
+### ✅ **Integración Completa con Transbank**
+- Conexión directa con API REST Webpay Plus (sin SDK)
+- Soporte para ambientes de integración y producción
+- Manejo completo del flujo de pagos (crear, confirmar, consultar, reembolsar)
+- Validación automática de transacciones
+
+### ✅ **Sistema Integral FERREMAS**
+- **API Inventario** (Puerto 3000): Gestión de productos y stock
+- **API Banco** (Puerto 3001): Pagos y validaciones bancarias
+- **API Transbank** (Puerto 3003): Orquestador de transacciones
+- Sincronización automática entre todos los sistemas
+
+### ✅ **Características Técnicas**
+- Base de datos MySQL con auditoría completa
+- Logs detallados de todas las operaciones
+- Middleware de seguridad avanzado
+- Rate limiting y validación de entrada
+- CORS configurado para múltiples orígenes
+- Manejo robusto de errores
+
+### ✅ **Herramientas de Desarrollo**
+- Suite de pruebas automatizada
+- Colección Postman incluida
+- Scripts de migración y setup
+- Health checks para todas las APIs
+- Panel de administración para transacciones
+
+---
+
+## ⚙️ Instalación
+
+### **Prerrequisitos**
+- **Node.js** 18.0.0 o superior
+- **MySQL** 8.0 o superior
+- **npm** 8.0.0 o superior
+
+### **1. Clonar el Repositorio**
 ```bash
-git clone [tu-repositorio]
-cd transbank-integration
+git clone https://github.com/tu-usuario/ferremas-transbank.git
+cd ferremas-transbank
+```
+
+### **2. Instalar Dependencias**
+```bash
 npm install
 ```
 
-### 2. Configurar variables de entorno
+### **3. Configurar Base de Datos**
 ```bash
-# Copia el archivo de ejemplo
+# Crear la base de datos
+mysql -u root -p -e "CREATE DATABASE ferremas_complete CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;"
+
+# Ejecutar scripts de configuración
+mysql -u administrador -p ferremas_complete < scripts/setup-database.sql
+```
+
+### **4. Configurar Variables de Entorno**
+```bash
+# Copiar archivo de ejemplo
 cp .env.example .env
 
-# Edita las variables según tu configuración
+# Editar configuración
 nano .env
 ```
 
-### 3. Configurar base de datos
-```bash
-# Ejecutar script SQL en tu base de datos MySQL
-mysql -u administrador -p ferremas_complete < scripts/setup-database.sql
-
-# O usar el script de Node.js
-npm run db:setup
-```
-
-### 4. Iniciar servidor
+### **5. Iniciar el Servidor**
 ```bash
 # Desarrollo
 npm run dev
@@ -51,36 +108,178 @@ npm run dev
 npm start
 ```
 
+---
+
+## 🔧 Configuración
+
+### **Variables de Entorno Críticas**
+
+```bash
+# ============================================
+# CONFIGURACIÓN WEBPAY PLUS - FERREMAS
+# ============================================
+
+# Ambiente Webpay
+WEBPAY_ENV=integration  # o 'production' para producción
+
+# Credenciales Transbank (Integración)
+WEBPAY_API_KEY_ID=597055555532
+WEBPAY_API_KEY_SECRET=579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C
+
+# Base de datos
+DB_HOST=localhost
+DB_USER=administrador
+DB_PASSWORD=yR!9uL2@pX
+DB_NAME=ferremas_complete
+DB_PORT=3306
+
+# URLs de APIs internas
+API_INVENTARIO_URL=http://localhost:3000/api
+API_BANCO_URL=http://localhost:3001/api/v1
+
+# Puerto de la API
+PORT=3003
+
+# CORS y orígenes permitidos
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:3003
+```
+
+### **Configuración para Producción**
+
+⚠️ **Para producción, reemplazar con credenciales reales:**
+
+```bash
+WEBPAY_ENV=production
+WEBPAY_API_KEY_ID=tu_api_key_id_real
+WEBPAY_API_KEY_SECRET=tu_api_key_secret_real
+```
+
+---
+
 ## 📁 Estructura del Proyecto
 
 ```
-transbank-integration/
-├── app.js                      # Aplicación principal Express
-├── services/
-│   └── transbank.js           # Servicio para API de Transbank + Banco
-├── routes/
-│   └── transbank.js           # Rutas del flujo de pagos
-├── scripts/
-│   └── setup-database.sql     # Script para configurar BD
-├── test/
-│   └── test-transbank.js      # Ejemplos y tests
-├── .env.example               # Variables de entorno de ejemplo
-├── package.json
-└── README.md
+ferremas-transbank/
+├── 📄 app.js                          # Aplicación principal Express
+├── 📂 src/
+│   ├── 📂 controllers/
+│   │   ├── transbankController.js      # Controlador principal Transbank
+│   │   └── webpayController.js         # Controlador Webpay Plus real
+│   ├── 📂 models/
+│   │   ├── Transaccion.js              # Modelo de transacciones
+│   │   ├── TransbankLog.js             # Modelo de logs
+│   │   └── index.js                    # Configuración Sequelize
+│   ├── 📂 routes/
+│   │   ├── transbankRoutes.js          # Rutas principales
+│   │   └── webpayRoutes.js             # Rutas Webpay real
+│   ├── 📂 middlewares/
+│   │   └── security.js                 # Middleware de seguridad
+│   ├── 📂 utils/
+│   │   └── webpayHelpers.js            # Utilidades Webpay
+│   └── 📂 config/
+│       ├── database.js                 # Configuración BD
+│       └── webpay.js                   # Configuración Webpay
+├── 📂 scripts/
+│   ├── setup-database.sql              # Script setup BD
+│   ├── test-integration.js             # Tests integración
+│   ├── test-webpay-integration.js      # Tests Webpay
+│   └── migrate-to-real-webpay.js       # Script migración
+├── 📂 docs/
+│   └── FERREMAS_API_Collection.postman.yaml  # Colección Postman
+├── 📄 package.json
+├── 📄 .env.example
+└── 📄 README.md
 ```
 
-## 🔧 API Endpoints
+---
 
-### 🆕 Crear Transacción
+## 🌐 Documentación de API
+
+### **Base URL**
+```
+http://localhost:3003/api/transbank
+```
+
+### **🏥 Health Checks**
+
+#### **Verificar Estado General**
 ```http
-POST /api/transbank/create
-Content-Type: application/json
+GET /api/transbank/health
+```
 
+**Respuesta:**
+```json
 {
-  "amount": 15000,
-  "buyOrder": "123456",     // opcional
-  "sessionId": "654321",    // opcional  
-  "userId": 1               // opcional
+  "success": true,
+  "message": "Todas las conexiones funcionando",
+  "status": "API Transbank funcionando",
+  "version": "1.0.0",
+  "conexiones": {
+    "inventario": true,
+    "banco": true,
+    "database": true,
+    "timestamp": "2025-06-28T10:30:00.000Z"
+  }
+}
+```
+
+### **💳 Gestión de Transacciones**
+
+#### **Crear Nueva Transacción**
+```http
+POST /api/transbank/iniciar
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "clienteId": 1,
+  "ordenCompra": "ORD-1234567890",
+  "monto": 75000,
+  "divisa": "CLP",
+  "detalles": [
+    {
+      "ID_Producto": 1,
+      "Cantidad": 2,
+      "Precio_Unitario": 25000
+    },
+    {
+      "ID_Producto": 2,
+      "Cantidad": 1,
+      "Precio_Unitario": 25000
+    }
+  ]
+}
+```
+
+**Respuesta Exitosa:**
+```json
+{
+  "success": true,
+  "message": "Transacción creada exitosamente",
+  "transaccion": {
+    "id": 123,
+    "cliente_id": 1,
+    "orden_compra": "ORD-1234567890",
+    "monto": 75000,
+    "estado": "PENDIENTE",
+    "token": "e9d555262db0f989e49d724b4db0bd681def....",
+    "fecha_creacion": "2025-06-28T10:30:00.000Z"
+  }
+}
+```
+
+#### **Confirmar Transacción**
+```http
+POST /api/transbank/confirmar
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "id_transaccion": 123
 }
 ```
 
@@ -88,379 +287,390 @@ Content-Type: application/json
 ```json
 {
   "success": true,
-  "message": "Transacción creada exitosamente",
+  "message": "Transacción confirmada exitosamente",
+  "transaccion": {
+    "id": 123,
+    "estado": "APROBADO",
+    "fecha_actualizacion": "2025-06-28T10:35:00.000Z"
+  },
   "data": {
-    "token": "01ab23cd4ef5...",
-    "url": "https://webpay3gint.transbank.cl/webpayserver/initTransaction",
-    "buyOrder": "123456",
-    "sessionId": "654321",
-    "amount": 15000,
-    "redirectUrl": "http://localhost:3003/api/transbank/redirect/01ab23cd4ef5..."
+    "pago_registrado": true,
+    "pedido_creado": true,
+    "inventario_actualizado": true
   }
 }
 ```
 
-### 📄 Crear Transacción Simple (Compatible con PHP)
+#### **Consultar Estado de Transacción**
 ```http
-GET /api/transbank
-```
-Crea una transacción con valores por defecto (monto: $15.000).
-
-### 🔄 Redirigir a Pago
-```http
-GET /api/transbank/redirect/:token
-```
-Genera página HTML que redirige automáticamente a Transbank con interfaz mejorada.
-
-### ✅ Confirmar Resultado (Webhook Transbank)
-```http
-POST /api/transbank/result
-Content-Type: application/x-www-form-urlencoded
-
-token_ws={token}
-```
-Este endpoint es llamado por Transbank. Redirige automáticamente al frontend.
-
-### 📊 Consultar Estado
-```http
-GET /api/transbank/status/:token
+GET /api/transbank/estado/{id_transaccion}
 ```
 
-### 💰 Realizar Reembolso
-```http
-POST /api/transbank/refund/:token
-Content-Type: application/json
-
+**Respuesta:**
+```json
 {
-  "amount": 15000
+  "success": true,
+  "transaccion": {
+    "id": 123,
+    "cliente_id": 1,
+    "orden_compra": "ORD-1234567890",
+    "monto": 75000,
+    "estado": "APROBADO",
+    "detalles": [...],
+    "fecha_creacion": "2025-06-28T10:30:00.000Z",
+    "fecha_actualizacion": "2025-06-28T10:35:00.000Z"
+  }
 }
 ```
 
-### 📋 Obtener Información de Transacción
+#### **Listar Transacciones**
 ```http
-GET /api/transbank/transaction/:token
+GET /api/transbank/listar?limit=10&estado=APROBADO&cliente_id=1
 ```
 
-### 🔗 Webhook del Banco
-```http
-POST /api/transbank/webhook/bank
-Content-Type: application/json
+### **🔄 Webpay Plus Real**
 
+#### **Crear Transacción Webpay**
+```http
+POST /api/webpay/create
+Content-Type: application/json
+```
+
+**Body:**
+```json
 {
-  "action": "validate-payment",
-  "token": "abc123",
-  "data": { "approved": true }
+  "clienteId": 1,
+  "productos": [
+    {"ID_Producto": 1, "Cantidad": 2},
+    {"ID_Producto": 2, "Cantidad": 1}
+  ],
+  "returnUrl": "https://mi-sitio.com/webpay/return"
 }
 ```
 
-### 👨‍💼 Admin: Listar Transacciones
-```http
-GET /api/transbank/admin/transactions?page=1&limit=20&status=authorized
-```
-
-## 🔄 Flujo Completo de Pago
-
-```mermaid
-sequenceDiagram
-    participant F as Frontend
-    participant A as API Node.js
-    participant B as API Banco
-    participant T as Transbank
-    participant D as Base de Datos
-
-    F->>A: POST /api/transbank/create
-    A->>B: Validar transacción
-    B-->>A: Aprobación
-    A->>T: Crear transacción
-    T-->>A: Token + URL
-    A->>D: Guardar transacción
-    A-->>F: Token + redirectUrl
-    
-    F->>A: GET /redirect/:token
-    A-->>F: Página de redirección
-    F->>T: Formulario de pago
-    
-    Note over T: Usuario realiza pago
-    
-    T->>A: POST /result (webhook)
-    A->>T: Confirmar transacción
-    T-->>A: Resultado final
-    A->>B: Notificar resultado
-    A->>D: Actualizar estado
-    A-->>F: Redirigir con resultado
-```
-
-## 🔗 Integración con API del Banco
-
-### Configuración
-El servicio se conecta automáticamente con tu API del banco en `localhost:3001`. Las siguientes acciones se notifican:
-
-- ✅ **transaction-created**: Nueva transacción creada
-- ✅ **transaction-confirmed**: Pago confirmado
-- ✅ **transaction-status-checked**: Estado consultado
-- ✅ **transaction-refunded**: Reembolso procesado
-
-### Endpoints esperados en API Banco
-```javascript
-// POST http://localhost:3001/transbank/transaction-created
-// POST http://localhost:3001/transbank/transaction-confirmed
-// POST http://localhost:3001/transbank/transaction-status-checked  
-// POST http://localhost:3001/transbank/transaction-refunded
-// POST http://localhost:3001/validate-transaction
-```
-
-## 💾 Base de Datos
-
-### Tabla Principal: `transbank_transactions`
-```sql
-- id, token, buy_order, session_id, amount
-- status (created, confirmed, authorized, failed, refunded)
-- transbank_url, response_code, authorization_code
-- card_detail (JSON), raw_response (JSON)
-- refund_amount, refund_date
-- bank_validation, bank_balance_updated
-- user_id, created_at, updated_at
-```
-
-### Tabla de Logs: `transbank_api_logs`
-```sql
-- transaction_token, api_type, action, method, url
-- request_data (JSON), response_data (JSON)
-- success, error_message, execution_time_ms
-```
-
-### Vista de Estadísticas: `transbank_stats`
-Estadísticas diarias de transacciones de los últimos 30 días.
-
-## 🌐 Integración con Frontend
-
-### Ejemplo con JavaScript/Fetch:
-```javascript
-// 1. Crear transacción
-async function iniciarPago(amount = 15000, userId = null) {
-    const response = await fetch('/api/transbank/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, userId })
-    });
-    
-    const data = await response.json();
-    
-    if (data.success) {
-        // 2. Redirigir al formulario de pago
-        window.location.href = data.data.redirectUrl;
+**Respuesta:**
+```json
+{
+  "success": true,
+  "message": "Transacción creada exitosamente en Transbank",
+  "data": {
+    "token": "e9d555262db0f989e49d724b4db0bd681def....",
+    "url": "https://webpay3gint.transbank.cl/webpayserver/initTransaction",
+    "transaccion_id": 123,
+    "amount": 50000
+  },
+  "instructions": {
+    "next_step": "Redirigir usuario a result.data.url con form POST",
+    "form_data": {
+      "token_ws": "e9d555262db0f989e49d724b4db0bd681def...."
     }
-}
-
-// 3. Manejar resultado en página de retorno
-// URL: http://localhost:3004/payment-result?token=...&status=...&success=true
-const urlParams = new URLSearchParams(window.location.search);
-const paymentSuccess = urlParams.get('success') === 'true';
-const amount = urlParams.get('amount');
-const authCode = urlParams.get('authCode');
-```
-
-### Ejemplo con React:
-```jsx
-function PagoComponent() {
-    const [loading, setLoading] = useState(false);
-    
-    const handlePago = async (amount) => {
-        setLoading(true);
-        try {
-            const response = await fetch('/api/transbank/create', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    amount, 
-                    userId: currentUser.id 
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                // Redirigir al formulario de pago
-                window.location.href = data.data.redirectUrl;
-            } else {
-                alert('Error al crear transacción: ' + data.message);
-            }
-        } catch (error) {
-            console.error('Error:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-    
-    return (
-        <button 
-            onClick={() => handlePago(25000)} 
-            disabled={loading}
-            className="btn-pagar"
-        >
-            {loading ? 'Procesando...' : 'Pagar $25.000'}
-        </button>
-    );
-}
-
-// Componente para manejar resultado del pago
-function PaymentResult() {
-    const [searchParams] = useSearchParams();
-    const success = searchParams.get('success') === 'true';
-    const amount = searchParams.get('amount');
-    const token = searchParams.get('token');
-    
-    return (
-        <div className={`payment-result ${success ? 'success' : 'error'}`}>
-            {success ? (
-                <div>
-                    <h2>✅ ¡Pago Exitoso!</h2>
-                    <p>Monto: ${parseInt(amount).toLocaleString('es-CL')}</p>
-                    <p>Token: {token}</p>
-                </div>
-            ) : (
-                <div>
-                    <h2>❌ Pago Fallido</h2>
-                    <p>Intenta nuevamente</p>
-                </div>
-            )}
-        </div>
-    );
+  }
 }
 ```
 
-## ⚙️ Configuración para Producción
-
-### 1. Variables de entorno
-```bash
-NODE_ENV=production
-WEBPAY_API_KEY_ID=tu_api_key_id_real_produccion
-WEBPAY_API_KEY_SECRET=tu_api_key_secret_real_produccion
-FRONTEND_URL=https://tu-dominio.com
-BANK_API_URL=https://tu-api-banco-produccion.com
-DB_HOST=tu-servidor-mysql-produccion
+#### **Confirmar Transacción Webpay**
+```http
+PUT /api/webpay/confirm/{token}
 ```
 
-### 2. HTTPS obligatorio
-```bash
-# Usar proxy reverso (nginx/apache) o certificado SSL
-# Transbank requiere HTTPS en producción
+### **📊 Administración y Consultas**
+
+#### **Obtener Estadísticas**
+```http
+GET /api/transbank/stats
 ```
 
-### 3. Optimizaciones de base de datos
-```sql
--- Crear índices adicionales para mejor rendimiento
-CREATE INDEX idx_created_status ON transbank_transactions(created_at, status);
-CREATE INDEX idx_user_amount ON transbank_transactions(user_id, amount);
-
--- Configurar limpieza automática de logs antiguos
--- Ejecutar semanalmente:
-CALL CleanOldTransactions(90);
+#### **Consultar Logs**
+```http
+GET /api/transbank/logs?limit=20&accion=CONFIRMAR_TRANSACCION
 ```
-
-## 🧪 Testing y Desarrollo
-
-### Ejecutar tests
-```bash
-npm test
-```
-
-### Credenciales de testing (sandbox)
-- **Tarjeta:** `4051885600446623`
-- **Año:** Cualquier año futuro (ej: 2025)
-- **CVV:** `123`
-
-### Endpoints de desarrollo
-```bash
-# Health check
-curl http://localhost:3003/health
-
-# Crear transacción de prueba
-curl http://localhost:3003/api/transbank
-
-# Ver todas las transacciones
-curl http://localhost:3003/api/transbank/admin/transactions
-```
-
-## 🔒 Seguridad y Mejores Prácticas
-
-### ✅ Implementado
-- Variables de entorno para credenciales
-- Validación de datos de entrada
-- Logs de auditoría completos
-- Timeouts en peticiones HTTP
-- Manejo de errores robusto
-- CORS configurado correctamente
-
-### 🔄 Recomendaciones adicionales
-- Usar HTTPS en producción
-- Implementar rate limiting
-- Validar tokens con TTL
-- Encriptar datos sensibles en BD
-- Monitorear logs de transacciones
-- Configurar alertas para fallos
-
-## 📊 Estados de Transacción
-
-| Estado | Descripción |
-|--------|-------------|
-| `created` | Transacción creada, pendiente de pago |
-| `confirmed` | Pago confirmado por Transbank |
-| `authorized` | Pago autorizado exitosamente |
-| `failed` | Pago fallido o rechazado |
-| `refunded` | Transacción reembolsada |
-| `cancelled` | Transacción cancelada |
-
-## 🛠️ Comandos Útiles
-
-```bash
-# Desarrollo
-npm run dev              # Iniciar con nodemon
-npm start               # Iniciar en producción
-npm test                # Ejecutar tests
-npm run db:setup        # Configurar base de datos
-
-# Base de datos
-mysql -u administrador -p ferremas_complete < scripts/setup-database.sql
-
-# Logs en tiempo real
-tail -f logs/transbank.log
-
-# Verificar configuración
-curl http://localhost:3003/health
-```
-
-## 📞 Soporte y Debugging
-
-### Variables de debug
-```bash
-# Activar logs detallados
-TRANSBANK_DEBUG=true
-LOG_LEVEL=debug
-```
-
-### Logs importantes
-- Todas las peticiones a Transbank se registran en `transbank_api_logs`
-- Estados de transacciones se actualizan automáticamente
-- Errores se loggean con stack trace completo
-
-### Problemas comunes
-1. **Error de credenciales**: Verificar `WEBPAY_API_KEY_ID` y `WEBPAY_API_KEY_SECRET`
-2. **Timeout de BD**: Aumentar `connectionLimit` en pool MySQL
-3. **CORS errors**: Verificar `FRONTEND_URL` en configuración
-4. **API Banco no responde**: Verificar `BANK_API_URL` y logs
 
 ---
 
-## 🎯 Próximos Pasos
+## 🔄 Flujo de Transacciones
 
-Una vez que tengas todo funcionando:
+### **Flujo Completo de Pago**
 
-1. **Personalizar montos** según tu aplicación
-2. **Integrar con sistema de usuarios** existente
-3. **Configurar notificaciones** por email/SMS
-4. **Implementar dashboard** de administración
-5. **Configurar monitoreo** de transacciones
-6. **Preparar para producción** con certificados SSL
+```mermaid
+sequenceDiagram
+    participant C as Cliente
+    participant F as Frontend
+    participant T as API Transbank
+    participant I as API Inventario
+    participant B as API Banco
+    participant W as Webpay Plus
+    participant D as Base de Datos
 
-¡Tu integración de Transbank está lista para usar! 🚀
+    C->>F: Iniciar compra
+    F->>T: POST /api/transbank/iniciar
+    T->>I: Validar productos y stock
+    I-->>T: Stock disponible
+    T->>D: Crear transacción
+    T->>W: Crear transacción Webpay
+    W-->>T: Token + URL
+    T-->>F: Token para pago
+    
+    F->>W: Redirigir a Webpay
+    C->>W: Realizar pago
+    W->>T: Webhook confirmación
+    T->>W: Confirmar transacción
+    W-->>T: Resultado final
+    
+    alt Pago Exitoso
+        T->>B: Registrar pago
+        T->>I: Actualizar inventario
+        T->>D: Actualizar estado
+        T-->>F: Confirmación exitosa
+    else Pago Fallido
+        T->>D: Marcar como fallido
+        T-->>F: Error de pago
+    end
+```
+
+### **Estados de Transacción**
+
+| Estado | Descripción | Es Final |
+|--------|-------------|----------|
+| `PENDIENTE` | Transacción creada, esperando pago | ❌ |
+| `PROCESANDO` | Pago en proceso de validación | ❌ |
+| `APROBADO` | Pago aprobado exitosamente | ✅ |
+| `RECHAZADO` | Pago rechazado o fallido | ✅ |
+| `CANCELADO` | Transacción cancelada | ✅ |
+| `REEMBOLSADO` | Transacción reembolsada | ✅ |
+| `EXPIRADO` | Transacción expirada por tiempo | ✅ |
+
+---
+
+## 💾 Base de Datos
+
+### **Tabla Principal: `transacciones`**
+```sql
+CREATE TABLE transacciones (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ID_Cliente INT NULL,
+    ordenCompra VARCHAR(100) NULL,
+    monto DECIMAL(10,2) NULL,
+    token VARCHAR(255) NULL,
+    estado VARCHAR(50) DEFAULT 'PENDIENTE',
+    detalles LONGTEXT NULL,
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+### **Tabla de Logs: `transbank_logs`**
+```sql
+CREATE TABLE transbank_logs (
+    ID_Log INT AUTO_INCREMENT PRIMARY KEY,
+    ID_Transaccion INT NULL,
+    Accion VARCHAR(50) NOT NULL,
+    Descripcion VARCHAR(500) NULL,
+    Datos_Entrada TEXT NULL,
+    Datos_Salida TEXT NULL,
+    Codigo_Respuesta VARCHAR(10) DEFAULT '200',
+    Mensaje_Error TEXT NULL,
+    IP_Origen VARCHAR(45) NULL,
+    User_Agent TEXT NULL,
+    Duracion_MS INT DEFAULT 0,
+    Fecha_Creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+---
+
+## 🧪 Testing
+
+### **Ejecutar Suite Completa de Pruebas**
+```bash
+# Pruebas de integración completa
+node scripts/test-integration.js
+
+# Pruebas específicas de Webpay
+node scripts/test-webpay-integration.js
+
+# Prueba rápida
+node scripts/test-webpay-integration.js --quick
+```
+
+### **Health Checks Manuales**
+```bash
+# Verificar APIs
+curl http://localhost:3003/api/transbank/health
+curl http://localhost:3003/api/webpay/health
+
+# Crear transacción de prueba
+curl -X POST http://localhost:3003/api/webpay/test-create
+```
+
+### **Datos de Prueba (Ambiente Integración)**
+- **Tarjeta de Prueba:** `4051885600446623`
+- **CVV:** `123`
+- **Fecha:** Cualquier fecha futura (ej: `12/25`)
+- **Resultado:** Transacción aprobada
+
+### **Colección Postman**
+Importa la colección incluida en `docs/FERREMAS_API_Collection.postman.yaml` para probar todos los endpoints.
+
+**Flujo de prueba recomendado:**
+1. Health Checks → Verificar APIs
+2. Listar Productos → Consultar inventario
+3. Crear Transacción → Flujo completo
+4. Confirmar Transacción → Procesar pago
+5. Verificar Estado → Validar resultado
+
+---
+
+## 🚀 Producción
+
+### **1. Configuración de Ambiente**
+```bash
+# Variables críticas para producción
+NODE_ENV=production
+WEBPAY_ENV=production
+
+# Credenciales reales de Transbank
+WEBPAY_API_KEY_ID=tu_api_key_id_real
+WEBPAY_API_KEY_SECRET=tu_api_key_secret_real
+
+# URLs de producción
+API_INVENTARIO_URL=https://tu-api-inventario-prod.com
+API_BANCO_URL=https://tu-api-banco-prod.com
+```
+
+### **2. Requisitos de Infraestructura**
+- **HTTPS obligatorio** (Transbank requiere SSL)
+- **MySQL 8.0+** con configuración optimizada
+- **Node.js 18+** con PM2 para gestión de procesos
+- **Nginx/Apache** como proxy reverso
+- **Monitoring** y alertas configuradas
+
+### **3. Optimizaciones de Base de Datos**
+```sql
+-- Índices para mejor rendimiento
+CREATE INDEX idx_transacciones_estado ON transacciones(estado);
+CREATE INDEX idx_transacciones_fecha ON transacciones(createdAt);
+CREATE INDEX idx_logs_transaccion ON transbank_logs(ID_Transaccion);
+CREATE INDEX idx_logs_fecha ON transbank_logs(Fecha_Creacion);
+
+-- Configurar limpieza automática
+-- Ejecutar semanalmente
+DELETE FROM transbank_logs WHERE Fecha_Creacion < DATE_SUB(NOW(), INTERVAL 90 DAY);
+```
+
+### **4. Comandos de Despliegue**
+```bash
+# Instalar dependencias de producción
+npm ci --only=production
+
+# Iniciar con PM2
+pm2 start app.js --name "ferremas-transbank"
+pm2 startup
+pm2 save
+
+# Logs en tiempo real
+pm2 logs ferremas-transbank
+```
+
+---
+
+## 🛠️ Troubleshooting
+
+### **Problemas Comunes**
+
+#### **❌ Error: "ECONNREFUSED" al conectar con APIs**
+```bash
+# Verificar que las APIs estén corriendo
+curl http://localhost:3000/api/productos  # API Inventario
+curl http://localhost:3001/api/v1/        # API Banco
+
+# Verificar variables de entorno
+echo $API_INVENTARIO_URL
+echo $API_BANCO_URL
+```
+
+#### **❌ Error: "ER_ACCESS_DENIED_ERROR" Base de Datos**
+```bash
+# Verificar credenciales
+mysql -u administrador -p -h localhost
+
+# Verificar permisos
+GRANT ALL PRIVILEGES ON ferremas_complete.* TO 'administrador'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+#### **❌ Error: "Invalid API Key" Transbank**
+```bash
+# Verificar credenciales en .env
+echo $WEBPAY_API_KEY_ID
+echo $WEBPAY_API_KEY_SECRET
+
+# Para producción, usar credenciales reales
+# Para testing, usar: 597055555532 y 579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C
+```
+
+#### **❌ Error: "CORS Policy" Frontend**
+```bash
+# Verificar configuración CORS
+echo $ALLOWED_ORIGINS
+
+# Debe incluir la URL del frontend
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:3003,http://localhost:3004
+```
+
+### **Logs y Debugging**
+```bash
+# Logs detallados
+TRANSBANK_DEBUG=true
+LOG_LEVEL=debug
+
+# Ver logs de base de datos
+SELECT * FROM transbank_logs ORDER BY Fecha_Creacion DESC LIMIT 10;
+
+# Ver transacciones recientes
+SELECT * FROM transacciones ORDER BY createdAt DESC LIMIT 10;
+```
+
+---
+
+## 📞 Soporte
+
+### **Recursos de Desarrollo**
+- **Documentación Oficial Transbank:** [https://www.transbankdevelopers.cl/](https://www.transbankdevelopers.cl/)
+- **API REST Webpay Plus:** [https://www.transbankdevelopers.cl/documentacion/webpay-plus](https://www.transbankdevelopers.cl/documentacion/webpay-plus)
+- **Postman Collection:** `docs/FERREMAS_API_Collection.postman.yaml`
+
+### **Scripts de Utilidad**
+```bash
+# Verificar configuración completa
+node scripts/verify-setup.js
+
+# Migrar a Webpay real
+node scripts/migrate-to-real-webpay.js
+
+# Setup automático completo
+node scripts/setup-webpay-complete.js
+```
+
+### **Contacto y Contribuciones**
+- **Issues:** Reportar problemas en el repositorio
+- **Wiki:** Documentación extendida disponible
+- **Slack/Teams:** Canal de desarrollo interno
+
+### **Información de Versión**
+- **Versión Actual:** 2.0.0
+- **Node.js:** 18.0.0+
+- **Express:** 4.21.2
+- **MySQL:** 8.0+
+- **Última Actualización:** Junio 2025
+
+---
+
+<div align="center">
+
+**🏪 FERREMAS - Sistema de Pagos Transbank**
+
+*Desarrollado con ❤️ para el ecosistema FERREMAS*
+
+![FERREMAS](https://img.shields.io/badge/FERREMAS-Transbank%20Integration-blue.svg)
+
+</div>
