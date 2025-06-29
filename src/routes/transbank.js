@@ -15,10 +15,16 @@ const generateRandomNumber = () => Math.floor(Math.random() * 1000000);
 // Página inicial - crear nueva transacción
 router.get('/', async (req, res) => {
     try {
-        const buyOrder = generateRandomNumber().toString();
+        // ✅ LEER PARÁMETROS DE LA URL
+        const { monto, ordenCompra, cliente_id } = req.query;
+        
+        const buyOrder = ordenCompra || generateRandomNumber().toString();
         const sessionId = generateRandomNumber().toString();
-        const amount = 15000; // Monto fijo de ejemplo
+        const amount = parseInt(monto) || 15000; // ← CORREGIDO: Leer monto de parámetros
         const returnUrl = `${req.protocol}://${req.get('host')}/api/transbank/result`;
+
+        console.log('📨 Parámetros recibidos:', { monto, ordenCompra, cliente_id });
+        console.log('💰 Monto a procesar:', amount);
 
         // Crear transacción en Transbank
         const response = await transbank.createTransaction(buyOrder, sessionId, amount, returnUrl);
@@ -30,7 +36,8 @@ router.get('/', async (req, res) => {
             amount,
             token: response.token,
             url: response.url,
-            status: 'created'
+            status: 'created',
+            cliente_id // ← Agregar cliente_id
         });
 
         res.json({
@@ -41,12 +48,13 @@ router.get('/', async (req, res) => {
                 url: response.url,
                 buyOrder,
                 sessionId,
-                amount,
+                amount, // ← Ahora será el monto correcto
                 redirectUrl: `${req.protocol}://${req.get('host')}/api/transbank/redirect/${response.token}`
             }
         });
 
     } catch (error) {
+        console.error('❌ Error creando transacción:', error);
         res.status(500).json({
             success: false,
             message: 'Error al crear la transacción',
@@ -99,6 +107,12 @@ router.post('/create', async (req, res) => {
             error: error.message
         });
     }
+});
+
+// ✅ NUEVA RUTA: Manejar cancelaciones
+router.get('/cancel', (req, res) => {
+    console.log('❌ Pago cancelado por el usuario');
+    res.redirect('http://localhost:3004/payment-cancel');
 });
 
 // Endpoint para redirigir al formulario de pago de Transbank
@@ -166,11 +180,14 @@ router.get('/redirect/:token', (req, res) => {
                 text-decoration: none;
                 display: inline-block;
                 transition: all 0.3s ease;
-                margin-top: 20px;
+                margin: 10px;
             }
             .btn:hover {
                 transform: translateY(-2px);
                 box-shadow: 0 5px 15px rgba(107, 25, 107, 0.4);
+            }
+            .btn-cancel {
+                background: linear-gradient(45deg, #dc2626, #ef4444);
             }
             .info {
                 background: #f8f9fa;
@@ -201,6 +218,8 @@ router.get('/redirect/:token', (req, res) => {
                 <input type="hidden" name="token_ws" value="${token}" />
                 <button type="submit" class="btn">🔒 Continuar al Pago Seguro</button>
             </form>
+            
+            <a href="http://localhost:3004/payment-cancel" class="btn btn-cancel">❌ Cancelar</a>
             
             <script>
                 // Auto-submit después de 3 segundos
@@ -234,17 +253,15 @@ router.get('/redirect/:token', (req, res) => {
     res.send(html);
 });
 
-// Resultado del pago - Transbank redirige aquí después del pago
+// ✅ MEJORADO: Resultado del pago con manejo de cancelaciones
 router.post('/result', async (req, res) => {
     try {
         const { token_ws } = req.body;
         
+        // Si no hay token, asumir que fue cancelado
         if (!token_ws) {
-            console.error('Token no proporcionado en /result');
-            return res.status(400).json({
-                success: false,
-                message: 'Token no proporcionado'
-            });
+            console.log('❌ Sin token - probablemente cancelado');
+            return res.redirect('http://localhost:3004/payment-cancel');
         }
 
         console.log(`📥 Confirmando transacción con token: ${token_ws}`);
@@ -253,10 +270,7 @@ router.post('/result', async (req, res) => {
         const transaction = transactions.get(token_ws);
         if (!transaction) {
             console.error(`Transacción no encontrada: ${token_ws}`);
-            return res.status(404).json({
-                success: false,
-                message: 'Transacción no encontrada'
-            });
+            return res.redirect('http://localhost:3004/payment-cancel');
         }
 
         // Confirmar la transacción con Transbank
@@ -271,56 +285,24 @@ router.post('/result', async (req, res) => {
 
         // Determinar si el pago fue exitoso
         const isSuccessful = result.status === 'AUTHORIZED' && result.response_code === 0;
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3004';
         
-        // Redirigir al frontend con los resultados
-        const redirectUrl = `${frontendUrl}/payment-result?` + 
-            `token=${token_ws}&` +
-            `status=${result.status}&` +
-            `success=${isSuccessful}&` +
-            `amount=${result.amount}&` +
-            `buyOrder=${result.buy_order}&` +
-            `authCode=${result.authorization_code || ''}&` +
-            `responseCode=${result.response_code || ''}`;
-
-        // Si es una petición desde navegador, redirigir directamente
-        if (req.headers.accept && req.headers.accept.includes('text/html')) {
-            return res.redirect(redirectUrl);
+        // Redirigir según el resultado
+        if (isSuccessful) {
+            res.redirect(`http://localhost:3004/payment-success?token_ws=${token_ws}&amount=${result.amount}`);
+        } else {
+            res.redirect('http://localhost:3004/payment-cancel');
         }
-
-        // Si es una petición API, retornar JSON
-        res.json({
-            success: isSuccessful,
-            message: isSuccessful ? 'Transacción confirmada exitosamente' : 'Transacción fallida',
-            data: {
-                ...result,
-                redirectUrl,
-                paymentSuccessful: isSuccessful
-            }
-        });
 
     } catch (error) {
         console.error('Error confirmando transacción:', error);
-        
-        // En caso de error, redirigir al frontend con error
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3004';
-        const errorRedirectUrl = `${frontendUrl}/payment-result?` +
-            `token=${req.body.token_ws || 'unknown'}&` +
-            `status=ERROR&` +
-            `success=false&` +
-            `error=${encodeURIComponent(error.message)}`;
-
-        if (req.headers.accept && req.headers.accept.includes('text/html')) {
-            return res.redirect(errorRedirectUrl);
-        }
-
-        res.status(500).json({
-            success: false,
-            message: 'Error al confirmar la transacción',
-            error: error.message,
-            redirectUrl: errorRedirectUrl
-        });
+        res.redirect('http://localhost:3004/payment-cancel');
     }
+});
+
+// ✅ NUEVA RUTA: Manejar GET a /result (cancelaciones)
+router.get('/result', (req, res) => {
+    console.log('❌ GET a /result - probablemente cancelación');
+    res.redirect('http://localhost:3004/payment-cancel');
 });
 
 // Obtener estado de una transacción
