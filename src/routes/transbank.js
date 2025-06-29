@@ -16,18 +16,28 @@ const generateRandomNumber = () => Math.floor(Math.random() * 1000000);
 router.get('/', async (req, res) => {
     try {
         // ✅ LEER PARÁMETROS DE LA URL
-        const { monto, ordenCompra, cliente_id } = req.query;
+        const { monto, ordenCompra, cliente_id, productos } = req.query;
         
         const buyOrder = ordenCompra || generateRandomNumber().toString();
         const sessionId = generateRandomNumber().toString();
         const amount = parseInt(monto) || 15000; // ← CORREGIDO: Leer monto de parámetros
         const returnUrl = `${req.protocol}://${req.get('host')}/api/transbank/result`;
 
-        console.log('📨 Parámetros recibidos:', { monto, ordenCompra, cliente_id });
+        console.log('📨 Parámetros recibidos:', { monto, ordenCompra, cliente_id, productos });
         console.log('💰 Monto a procesar:', amount);
 
         // Crear transacción en Transbank
         const response = await transbank.createTransaction(buyOrder, sessionId, amount, returnUrl);
+        
+        // ✅ Parsear productos si vienen como string JSON
+        let productosArray = [];
+        if (productos) {
+            try {
+                productosArray = JSON.parse(productos);
+            } catch (e) {
+                console.log('No se pudieron parsear productos:', productos);
+            }
+        }
         
         // Guardar información de la transacción
         transactions.set(response.token, {
@@ -37,7 +47,8 @@ router.get('/', async (req, res) => {
             token: response.token,
             url: response.url,
             status: 'created',
-            cliente_id // ← Agregar cliente_id
+            cliente_id, // ← Agregar cliente_id
+            productos: productosArray // ← Agregar productos para descuento de stock
         });
 
         res.json({
@@ -66,7 +77,7 @@ router.get('/', async (req, res) => {
 // Crear transacción con POST
 router.post('/create', async (req, res) => {
     try {
-        const { amount = 15000, buyOrder, sessionId, userId } = req.body;
+        const { amount = 15000, buyOrder, sessionId, userId, productos } = req.body;
         
         const finalBuyOrder = buyOrder || generateRandomNumber().toString();
         const finalSessionId = sessionId || generateRandomNumber().toString();
@@ -83,7 +94,8 @@ router.post('/create', async (req, res) => {
             token: response.token,
             url: response.url,
             status: 'created',
-            userId: userId || null
+            userId: userId || null,
+            productos: productos || [] // ← Agregar productos
         });
 
         res.json({
@@ -112,7 +124,17 @@ router.post('/create', async (req, res) => {
 // ✅ NUEVA RUTA: Manejar cancelaciones
 router.get('/cancel', (req, res) => {
     console.log('❌ Pago cancelado por el usuario');
-    res.redirect('http://localhost:3004/payment-cancel');
+    res.send(`
+        <html>
+        <head><title>Redirigiendo...</title></head>
+        <body>
+            <script>
+                window.top.location.href = 'http://localhost:3004/payment-cancel';
+            </script>
+            <p>Pago cancelado. <a href="http://localhost:3004/payment-cancel">Volver al carrito</a></p>
+        </body>
+        </html>
+    `);
 });
 
 // Endpoint para redirigir al formulario de pago de Transbank
@@ -253,15 +275,27 @@ router.get('/redirect/:token', (req, res) => {
     res.send(html);
 });
 
-// ✅ MEJORADO: Resultado del pago con manejo de cancelaciones
+// ✅ MEJORADO: Resultado del pago con manejo de cancelaciones y descuento de stock
 router.post('/result', async (req, res) => {
     try {
         const { token_ws } = req.body;
         
+        console.log('📥 POST /result recibido:', req.body);
+        
         // Si no hay token, asumir que fue cancelado
         if (!token_ws) {
-            console.log('❌ Sin token - probablemente cancelado');
-            return res.redirect('http://localhost:3004/payment-cancel');
+            console.log('❌ Sin token - redirigiendo a cancelación');
+            return res.send(`
+                <html>
+                <head><title>Redirigiendo...</title></head>
+                <body>
+                    <script>
+                        window.top.location.href = 'http://localhost:3004/payment-cancel';
+                    </script>
+                    <p>Redirigiendo... <a href="http://localhost:3004/payment-cancel">Clic aquí si no rediriges automáticamente</a></p>
+                </body>
+                </html>
+            `);
         }
 
         console.log(`📥 Confirmando transacción con token: ${token_ws}`);
@@ -270,7 +304,17 @@ router.post('/result', async (req, res) => {
         const transaction = transactions.get(token_ws);
         if (!transaction) {
             console.error(`Transacción no encontrada: ${token_ws}`);
-            return res.redirect('http://localhost:3004/payment-cancel');
+            return res.send(`
+                <html>
+                <head><title>Redirigiendo...</title></head>
+                <body>
+                    <script>
+                        window.top.location.href = 'http://localhost:3004/payment-cancel';
+                    </script>
+                    <p>Transacción no encontrada. <a href="http://localhost:3004/payment-cancel">Volver al carrito</a></p>
+                </body>
+                </html>
+            `);
         }
 
         // Confirmar la transacción con Transbank
@@ -286,23 +330,103 @@ router.post('/result', async (req, res) => {
         // Determinar si el pago fue exitoso
         const isSuccessful = result.status === 'AUTHORIZED' && result.response_code === 0;
         
-        // Redirigir según el resultado
+        // Redirigir según el resultado usando HTML con JavaScript
         if (isSuccessful) {
-            res.redirect(`http://localhost:3004/payment-success?token_ws=${token_ws}&amount=${result.amount}`);
+            // ✅ AQUÍ VA EL CÓDIGO DE DESCUENTO DE STOCK
+            console.log('✅ Pago exitoso - descontando stock...');
+            console.log('📦 Productos a descontar:', transaction.productos);
+            
+            // Descontar stock del inventario
+            if (transaction.productos && transaction.productos.length > 0) {
+                try {
+                    const stockData = {
+                        productos: transaction.productos.map(item => ({
+                            id_producto: item.id,
+                            cantidad: item.cantidad
+                        }))
+                    };
+                    
+                    console.log('📤 Enviando a API Inventario:', stockData);
+                    
+                    const response = await fetch('http://localhost:3000/api/inventario/descontar', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json' 
+                        },
+                        body: JSON.stringify(stockData)
+                    });
+                    
+                    if (response.ok) {
+                        const stockResult = await response.json();
+                        console.log('✅ Stock actualizado correctamente:', stockResult);
+                    } else {
+                        console.error('❌ Error en respuesta de stock:', await response.text());
+                    }
+                } catch (error) {
+                    console.error('❌ Error descontando stock:', error);
+                }
+            } else {
+                console.log('⚠️ No hay productos para descontar stock');
+            }
+            
+            // ✅ DESPUÉS DEL DESCUENTO, REDIRIGIR A ÉXITO
+            res.send(`
+                <html>
+                <head><title>Pago Exitoso</title></head>
+                <body>
+                    <script>
+                        window.top.location.href = 'http://localhost:3004/payment-success?token_ws=${token_ws}&amount=${result.amount}';
+                    </script>
+                    <p>Pago exitoso. <a href="http://localhost:3004/payment-success">Continuar</a></p>
+                </body>
+                </html>
+            `);
         } else {
-            res.redirect('http://localhost:3004/payment-cancel');
+            // Pago fallido - no descontar stock
+            console.log('❌ Pago fallido - no se descuenta stock');
+            res.send(`
+                <html>
+                <head><title>Pago Fallido</title></head>
+                <body>
+                    <script>
+                        window.top.location.href = 'http://localhost:3004/payment-cancel';
+                    </script>
+                    <p>Pago no autorizado. <a href="http://localhost:3004/payment-cancel">Volver al carrito</a></p>
+                </body>
+                </html>
+            `);
         }
 
     } catch (error) {
-        console.error('Error confirmando transacción:', error);
-        res.redirect('http://localhost:3004/payment-cancel');
+        console.error('❌ Error confirmando transacción:', error);
+        res.send(`
+            <html>
+            <head><title>Error</title></head>
+            <body>
+                <script>
+                    window.top.location.href = 'http://localhost:3004/payment-cancel';
+                </script>
+                <p>Error en el pago. <a href="http://localhost:3004/payment-cancel">Volver al carrito</a></p>
+            </body>
+            </html>
+        `);
     }
 });
 
 // ✅ NUEVA RUTA: Manejar GET a /result (cancelaciones)
 router.get('/result', (req, res) => {
     console.log('❌ GET a /result - probablemente cancelación');
-    res.redirect('http://localhost:3004/payment-cancel');
+    res.send(`
+        <html>
+        <head><title>Redirigiendo...</title></head>
+        <body>
+            <script>
+                window.top.location.href = 'http://localhost:3004/payment-cancel';
+            </script>
+            <p>Pago cancelado. <a href="http://localhost:3004/payment-cancel">Volver al carrito</a></p>
+        </body>
+        </html>
+    `);
 });
 
 // Obtener estado de una transacción
